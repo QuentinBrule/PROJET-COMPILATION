@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "variables.h"
 
 // Unité de compilation
@@ -35,4 +37,4 @@ void non(void);
 // Contrôle
 void tra(int);
 void tze(int);
-void erreur(void);
+void erreur(char*);

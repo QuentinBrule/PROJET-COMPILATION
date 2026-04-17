@@ -1,9 +1,11 @@
 #include <stdbool.h>
 
 extern bool running;
-extern char** po;
-extern int co;
+extern int ip;
 extern int* pile;
-extern int pi;
+extern int co;
+extern char** po;
 
 extern const bool debug;
+
+const int stack_size = 32;

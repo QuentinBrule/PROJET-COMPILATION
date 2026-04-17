@@ -6,7 +6,7 @@ int co;
 int* pile;
 int pi;
 
-const bool debug;
+const bool debug = false;
 
 
 
