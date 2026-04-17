@@ -1,3 +1,0 @@
-debutProg();
-reserver(5);
-finProg();
