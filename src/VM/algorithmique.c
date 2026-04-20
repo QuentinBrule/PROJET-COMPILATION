@@ -11,7 +11,6 @@ void debutProg(void) {
 void finProg(void) {
     running = false;
     free(pile);
-    free(po);
 }
 
 void reserver(int n) {
@@ -33,12 +32,12 @@ void valeurPile(void) {
 }
 
 void get(void) {
-    printf("Veuillez rentrer un nombre :");
+    printf("Veuillez rentrer un nombre : ");
     scanf("%d", &pile[pile[ip]]);
 }
 
 void put(void) {
-    printf("Voici un nombre produit : %d", pile[ip]);
+    printf("Voici un nombre produit : %d\n", pile[ip]);
     ip -= 1;
 }
 
@@ -61,7 +60,7 @@ void mult(void) {
     pile[ip] = pile[ip] * pile[ip+1];
 }
 
-void div(void) {
+void div2(void) {
     ip -= 1;
     pile[ip] = pile[ip] / pile[ip+1];
 }
@@ -111,20 +110,107 @@ void non(void) {
 }
 
 void tra(int ad) {
-    co = ad;
+    // `run()` incrémente toujours `co` après `step()`.
+    // On se positionne donc sur l'instruction précédente.
+    co = ad - 1;
 }
 
 void tze(int ad) {
     if (pile[ip]) {
-        co += 1;
+        // Cas vrai : on laisse le flot séquentiel.
+        // Le `co++` de run() amène naturellement à l'instruction suivante.
     }
     else {
-        co = ad;
+        // Cas faux : saut vers `ad` en compensant le `co++` de run().
+        co = ad - 1;
     }
     ip -= 1;
 }
 
 void erreur(char* exp) {
-    printf(exp);
+    printf("%s", exp);
     finProg();
+}
+
+void step(void) {
+    int n, val, ad;
+    char* exp;
+    if (instruction("debutProg()")) {
+        debutProg();
+    }
+    else if (instruction("finProg()")) {
+        finProg();
+    }
+    else if (instruction("reserver(%d)", &n)) {
+        reserver(n);
+    }
+    else if (instruction("empiler(%d)", &val)) {
+        empiler(val);
+    }
+    else if (instruction("affectation()")) {
+        affectation();
+    }
+    else if (instruction("valeurPile()")) {
+        valeurPile();
+    }
+    else if (instruction("get()")) {
+        get();
+    }
+    else if (instruction("put()")) {
+        put();
+    }
+    else if (instruction("moins()")) {
+        moins();
+    }
+    else if (instruction("sous()")) {
+        sous();
+    }
+    else if (instruction("add()")) {
+        add();
+    }
+    else if (instruction("mult()")) {
+        mult();
+    }
+    else if (instruction("div()")) {
+        div2();
+    }
+    else if (instruction("egal()")) {
+        egal();
+    }
+    else if (instruction("diff()")) {
+        diff();
+    }
+    else if (instruction("inf()")) {
+        inf();
+    }
+    else if (instruction("infeg()")) {
+        infeg();
+    }
+    else if (instruction("sup()")) {
+        sup();
+    }
+    else if (instruction("supeg()")) {
+        supeg();
+    }
+    else if (instruction("et()")) {
+        et();
+    }
+    else if (instruction("ou()")) {
+        ou();
+    }
+    else if (instruction("non()")) {
+        non();
+    }
+    else if (instruction("tra(%d)", &ad)) {
+        tra(ad);
+    }
+    else if (instruction("tze(%d)", &ad)) {
+        tze(ad);
+    }
+    else if (instruction("erreur(%s)", &exp)) {
+        erreur(exp);
+    }
+    else {
+        printf("Instruction inconnue: %s\n", po[co]);
+    }
 }

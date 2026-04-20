@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include <stdlib.h>
 
-#include "variables.h"
+#include "utils.h"
 
 // Unité de compilation
 void debutProg(void);
@@ -21,7 +21,7 @@ void moins(void);
 void sous(void);
 void add(void);
 void mult(void);
-void div(void);
+void div2(void); //div est déjà utilisé par stdlib.h
 
 // Expressions relationnelles et booléennes
 void egal(void);
@@ -38,3 +38,6 @@ void non(void);
 void tra(int);
 void tze(int);
 void erreur(char*);
+
+// Exécution
+void step(void);

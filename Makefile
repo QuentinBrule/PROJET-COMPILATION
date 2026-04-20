@@ -1,7 +1,10 @@
-.PHONY: test_nna
+.PHONY: test_nna clean
 
-bin/vm: src/vm/*.c src/vm/*.h
-	gcc -o $@ src/vm/*.c
+bin/vm_nna: src/VM/utils.c src/VM/algorithmique.c src/VM/main.c src/VM/utils.h src/VM/algorithmique.h
+	gcc -o $@ src/VM/utils.c src/VM/algorithmique.c src/VM/main.c
 
-test_nna: bin/vm
-	./$< test/code_objet/exemple_nna
+test_nna: bin/vm_nna
+	./$< tests/code_objet/exemple_nna
+
+clean:
+	rm -f bin/vm_nna
