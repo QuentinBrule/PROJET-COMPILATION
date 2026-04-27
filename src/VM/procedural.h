@@ -7,6 +7,7 @@ void finProg(void);
 // Variables et affectation
 void reserver(int);
 void empiler(int);
+void empilerAd(int);
 void affectation(void);
 void valeurPile(void);
 
@@ -35,7 +36,13 @@ void non(void);
 // Contrôle
 void tra(int);
 void tze(int);
-void erreur(char*);
+
+// Opérations
+void reserverBloc(void);
+void traStat(int, int);
+void retourFonct(void);
+void retourProc(void);
+void empilerParam(int);
 
 // Exécution
 void step(void);

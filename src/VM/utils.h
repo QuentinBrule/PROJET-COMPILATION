@@ -6,6 +6,7 @@
 
 extern bool running;
 extern int ip;
+extern int base;
 extern int* pile;
 extern int co;
 extern char** po;

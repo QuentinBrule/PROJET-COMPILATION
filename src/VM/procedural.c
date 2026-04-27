@@ -1,8 +1,9 @@
-#include "algorithmique.h"
+#include "procedural.h"
 
 void debutProg(void) {
     running = true;
     ip = -1;
+    base = -2;
     pile = malloc(stack_size * sizeof(int));
     co = 0;
     // Le po est supposé être remplis par le main
@@ -20,6 +21,11 @@ void reserver(int n) {
 void empiler(int val) {
     ip += 1;
     pile[ip] = val;
+}
+
+void empilerAd(int ad) {
+    ip += 1;
+    pile[ip] = base + 1 + ad;
 }
 
 void affectation(void) {
@@ -128,14 +134,38 @@ void tze(int ad) {
     ip -= 1;
 }
 
-void erreur(char* exp) {
-    printf("%s", exp);
-    finProg();
+void reserverBloc(void) {
+    ip += 2;
+    pile[ip-1] = base;
+}
+
+void traStat(int a, int nbp) {
+    pile[ip-nbp] = co+1;
+    base = ip-nbp-1;
+    co = a - 1;
+}
+
+void retourFonct(void) {
+    co = pile[base + 1] - 1;
+    int ancienne_base = base;
+    base = pile[base];
+    pile[ancienne_base] = pile[ip];
+    ip = ancienne_base;
+}
+
+void retourProc(void) {
+    co = pile[base + 1] - 1;
+    ip = base - 1;
+    base = pile[base];
+}
+
+void empilerParam(int ad) {
+    ip += 1;
+    pile[ip] = pile[base+2+ad];
 }
 
 void step(void) {
-    int n, val, ad;
-    char* exp;
+    int n, val, ad, a, nbp;
     if (instruction("debutProg()")) {
         debutProg();
     }
@@ -147,6 +177,9 @@ void step(void) {
     }
     else if (instruction("empiler(%d)", &val)) {
         empiler(val);
+    }
+    else if (instruction("empilerAd(%d)", &ad)) {
+        empilerAd(ad);
     }
     else if (instruction("affectation()")) {
         affectation();
@@ -208,8 +241,20 @@ void step(void) {
     else if (instruction("tze(%d)", &ad)) {
         tze(ad);
     }
-    else if (instruction("erreur(%s)", &exp)) {
-        erreur(exp);
+    else if (instruction("reserverBloc()")) {
+        reserverBloc();
+    }
+    else if (instruction("traStat(%d;%d)", &a, &nbp)) {
+        traStat(a, nbp);
+    }
+    else if (instruction("retourFonct()")) {
+        retourFonct();
+    }
+    else if (instruction("retourProc()")) {
+        retourProc();
+    }
+    else if (instruction("empilerParam(%d)", &ad)) {
+        empilerParam(ad);
     }
     else {
         printf("Instruction inconnue: %s\n", po[co]);
