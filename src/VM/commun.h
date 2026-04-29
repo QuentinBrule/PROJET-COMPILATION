@@ -34,3 +34,6 @@ void non(void);
 // Contrôle
 void tra(int);
 void tze(int);
+
+// Execution
+int step_commun(void);

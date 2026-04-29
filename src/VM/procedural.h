@@ -14,4 +14,4 @@ void retourProc(void);
 void empilerParam(int);
 
 // Exécution
-void step(void);
+int step(void);

@@ -12,7 +12,7 @@
 #error "Définir VM_NNA ou VM_NNP à la compilation."
 #endif
 
-#define DEBUG true
+#define DEBUG false
 
 bool running = false;
 char** po;
@@ -21,14 +21,16 @@ int* pile;
 int ip;
 int base;
 
-void run(void) {
+int run(void) {
+    int out = 1;
     do {
         if (DEBUG) {
             printf("%s\n", po[co]);
         }
-        step(); // Fonction provenant de algorithmique.c ou procedural.c
+        out = step(); // Fonction provenant de algorithmique.c ou procedural.c
         co ++;
     } while (running);
+    return out;
 }
 
 int main(int argc, char* argv[]) {
@@ -45,12 +47,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    run();
+    int code_sortie = run();
 
     for (int i = 0; i < nombre_ligne_programme; i++) {
         free(po[i]);
     }
     free(po);
 
-    return 0;
+    return code_sortie;
 }

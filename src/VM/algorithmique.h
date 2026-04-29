@@ -7,4 +7,4 @@ void debutProg(void);
 void erreur(char*);
 
 // Exécution
-void step(void);
+int step(void);
