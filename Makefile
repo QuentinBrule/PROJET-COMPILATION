@@ -12,10 +12,10 @@ bin/vm_nnp: src/VM/utils.c src/VM/commun.c src/VM/procedural.c src/VM/main.c src
 	$(CC) $(CFLAGS) -DVM_NNP -o $@ src/VM/utils.c src/VM/commun.c src/VM/procedural.c src/VM/main.c
 
 test_nna: bin/vm_nna
-	./$< tests/code_objet/exemple_nna
+	./$< tests/code_objet/exemple_nna -d
 
 test_nnp: bin/vm_nnp
-	./$< tests/code_objet/exemple_nnp
+	./$< tests/code_objet/exemple_nnp -d
 
 clean:
 	rm -f bin/vm_nna bin/vm_nnp

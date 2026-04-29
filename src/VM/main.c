@@ -12,7 +12,8 @@
 #error "Définir VM_NNA ou VM_NNP à la compilation."
 #endif
 
-#define DEBUG false
+#define ANSI_BACKGROUND_YELLOW "\x1b[43m"
+#define ANSI_RESET "\x1b[0m"
 
 bool running = false;
 char** po;
@@ -21,11 +22,13 @@ int* pile;
 int ip;
 int base;
 
+bool debug;
+
 int run(void) {
     int out = 1;
     do {
-        if (DEBUG) {
-            printf("%s\n", po[co]);
+        if (debug) {
+            printf(ANSI_BACKGROUND_YELLOW "[%2d] %s" ANSI_RESET "\n", co, po[co]);
         }
         out = step(); // Fonction provenant de algorithmique.c ou procedural.c
         co ++;
@@ -34,10 +37,18 @@ int run(void) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        perror("Utilisation du binaire: ./binaire fichier_code_objet");
+    if ((2 > argc) || (argc > 3)) {
+        perror("Utilisation du binaire: ./binaire fichier_code_objet [-d]");
         return 1;
     }
+
+    if (strcmp(argv[2], "-d") == 0) {
+        debug = true;
+    }
+    else {
+        debug = false;
+    }
+    
 
     int nombre_ligne_programme = 0;
     po = recuperer_programme(argv[1], &nombre_ligne_programme);
