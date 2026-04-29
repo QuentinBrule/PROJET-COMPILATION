@@ -1,0 +1,11 @@
+procedure main is
+procedure p(a : in integer) is
+begin
+put(a)
+end;
+x : integer;
+begin
+x := 1;
+p(x)
+end.
+
