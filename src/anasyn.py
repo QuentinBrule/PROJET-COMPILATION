@@ -504,7 +504,7 @@ def main():
         help="show debugging info on output",
     )
     parser.add_argument(
-        "--show-ident-table",
+        "--show-indent-table",
         action="store_true",
         help="shows the final identifiers table",
     )
@@ -537,7 +537,7 @@ def main():
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    if args.show_ident_table:
+    if args.show_indent_table:
         print("------ IDENTIFIER TABLE ------")
         print(str(identifier_table))
         print("------ END OF IDENTIFIER TABLE ------")
