@@ -46,7 +46,7 @@ void print_pile(void) {
     }
     int spaces = (largeur_pile - 1) / 2;
     printf(ANSI_BACKGROUND_BLUE "│%*s↑%*s│" ANSI_RESET "\n", spaces, "", largeur_pile%2 == 0 ? spaces + 1 : spaces, "");
-    for (int i = 0; i < ip; i ++) {
+    for (int i = ip; i > 0; i --) {
         printf(ANSI_BACKGROUND_BLUE "├");
         print_ligne(largeur_pile);
         printf("┤" ANSI_RESET "\n");
