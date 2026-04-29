@@ -20,4 +20,6 @@ bool instruction(char*, ...);
 
 char** recuperer_programme(char*, int*);
 
+char* string(int);
+
 #endif
