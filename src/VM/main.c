@@ -29,9 +29,17 @@ int base;
 
 bool debug;
 
-void print_ligne(int largeur_pile) {
-    for (int i = 0; i < largeur_pile; i ++) {
-        printf("─");
+void print_ligne(int largeur_pile, bool top) {
+    if (top) {
+        int spaces = (largeur_pile - 1) / 2;
+        print_ligne(spaces, false);
+        printf("┴");
+        print_ligne(largeur_pile%2 == 0 ? spaces + 1 : spaces, false);
+    }
+    else {
+        for (int i = 0; i < largeur_pile; i ++) {
+            printf("─");
+        }
     }
 }
 
@@ -46,15 +54,17 @@ void print_pile(void) {
         }
     }
     int spaces = (largeur_pile - 1) / 2;
-    printf(ANSI_BACKGROUND_BLUE "│%*s↑%*s│" ANSI_RESET "\n", spaces, "", largeur_pile%2 == 0 ? spaces + 1 : spaces, "");
+    printf(ANSI_BACKGROUND_BLUE "│%*s▲%*s│" ANSI_RESET "\n", spaces, "", largeur_pile%2 == 0 ? spaces + 1 : spaces, "");
+    bool top = true;
     for (int i = ip; i >= 0; i --) {
         printf(ANSI_BACKGROUND_BLUE "├");
-        print_ligne(largeur_pile);
+        print_ligne(largeur_pile, top);
+        top = false;
         printf("┤" ANSI_RESET "\n");
         printf(ANSI_BACKGROUND_BLUE "│%*d│" ANSI_RESET "\n", largeur_pile, pile[i]);
     }
     printf(ANSI_BACKGROUND_BLUE "└");
-    print_ligne(largeur_pile);
+    print_ligne(largeur_pile, top);
     printf("┘" ANSI_RESET "\n");
     printf("ip = %d\n", ip);
     if (procedural) {
