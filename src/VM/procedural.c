@@ -44,7 +44,7 @@ void empilerParam(int ad) {
     pile[ip] = pile[base+2+ad];
 }
 
-void step(void) {
+int step(void) {
     int ad, a, nbp;
     if (instruction("debutProg()")) {
         debutProg();

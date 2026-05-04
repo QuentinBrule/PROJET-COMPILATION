@@ -1,5 +1,8 @@
 #include "utils.h"
 
+#define CODE_FAUX 0
+#define CODE_VRAI 1
+
 // Unité de compilation
 void finProg(void);
 

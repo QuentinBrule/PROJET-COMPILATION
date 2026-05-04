@@ -26,7 +26,7 @@ void valeurPile(void) {
 void get(void) {
     printf("Veuillez rentrer un nombre : ");
     scanf("%d", &pile[pile[ip]]);
-    ip -= 1;
+    // ip -= 1;
 }
 
 void put(void) {
@@ -59,47 +59,87 @@ void div2(void) {
 }
 
 void egal(void) {
+    if (pile[ip-1] == pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] == pile[ip+1]);
 }
 
 void diff(void) {
+    if (pile[ip-1] != pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] != pile[ip+1]);
 }
 
 void inf(void) {
+    if (pile[ip-1] < pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] < pile[ip+1]);
 }
 
 void infeg(void) {
+    if (pile[ip-1] <= pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] <= pile[ip+1]);
 }
 
 void sup(void) {
+    if (pile[ip-1] > pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] > pile[ip+1]);
 }
 
 void supeg(void) {
+    if (pile[ip-1] >= pile[ip]) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] >= pile[ip+1]);
 }
 
 void et(void) {
+    if ((pile[ip-1] == 1) && (pile[ip] == 1)) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] & pile[ip+1]);
 }
 
 void ou(void) {
+    if ((pile[ip-1] == 1) || (pile[ip] == 1)) {
+        pile[ip-1] = CODE_VRAI;
+    }
+    else {
+        pile[ip-1] = CODE_FAUX;
+    }
     ip -= 1;
-    pile[ip] = (pile[ip] | pile[ip+1]);
 }
 
 void non(void) {
-    pile[ip] = 1 - pile[ip];
+    pile[ip] = 1 - pile[ip]; // Transforme 1 en 0 et inversement
 }
 
 void tra(int ad) {
@@ -107,7 +147,7 @@ void tra(int ad) {
 }
 
 void tze(int ad) {
-    if (!pile[ip]) {
+    if (pile[ip] == CODE_FAUX) {
         co = ad - 1;
     }
     ip -= 1;

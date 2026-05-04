@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 #include "utils.h"
 
@@ -36,7 +37,7 @@ void print_ligne(int largeur_pile) {
 
 void print_pile(void) {
     int largeur_pile = 1;
-    for (int i = 0; i < ip; i ++) {
+    for (int i = 0; i <= ip; i ++) {
         int num = pile[i] < 0 ? -pile[i] : pile[i];
         int e = num == 0 ? 1 : (int)floor(log10(num)) + 1;
         e += pile[i] < 0 ? 1 : 0;
@@ -46,7 +47,7 @@ void print_pile(void) {
     }
     int spaces = (largeur_pile - 1) / 2;
     printf(ANSI_BACKGROUND_BLUE "│%*s↑%*s│" ANSI_RESET "\n", spaces, "", largeur_pile%2 == 0 ? spaces + 1 : spaces, "");
-    for (int i = ip; i > 0; i --) {
+    for (int i = ip; i >= 0; i --) {
         printf(ANSI_BACKGROUND_BLUE "├");
         print_ligne(largeur_pile);
         printf("┤" ANSI_RESET "\n");
@@ -68,6 +69,8 @@ int run(void) {
             printf(ANSI_BACKGROUND_YELLOW "[%02d] %s" ANSI_RESET "\n", co, po[co]);
         }
         out = step(); // Fonction provenant de algorithmique.c ou procedural.c
+        assert(ip >= -1); // Stack underflow
+        assert(ip < stack_size); // Stack overflow
         co ++;
         if (debug) {
             print_pile();
