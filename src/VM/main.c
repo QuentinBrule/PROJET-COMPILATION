@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <assert.h>
 
 #include "utils.h"
@@ -16,10 +15,6 @@ bool procedural = true;
 #error "Définir VM_NNA ou VM_NNP à la compilation."
 #endif
 
-#define ANSI_BACKGROUND_YELLOW "\e[43m"
-#define ANSI_BACKGROUND_BLUE "\e[44m"
-#define ANSI_RESET "\e[0m"
-
 bool running = false;
 char** po;
 int co;
@@ -28,49 +23,6 @@ int ip;
 int base;
 
 bool debug;
-
-void print_ligne(int largeur_pile, bool top) {
-    if (top) {
-        int spaces = (largeur_pile - 1) / 2;
-        print_ligne(spaces, false);
-        printf("┴");
-        print_ligne(largeur_pile%2 == 0 ? spaces + 1 : spaces, false);
-    }
-    else {
-        for (int i = 0; i < largeur_pile; i ++) {
-            printf("─");
-        }
-    }
-}
-
-void print_pile(void) {
-    int largeur_pile = 1;
-    for (int i = 0; i <= ip; i ++) {
-        int num = pile[i] < 0 ? -pile[i] : pile[i];
-        int e = num == 0 ? 1 : (int)floor(log10(num)) + 1;
-        e += pile[i] < 0 ? 1 : 0;
-        if (e > largeur_pile) {
-            largeur_pile = e;
-        }
-    }
-    int spaces = (largeur_pile - 1) / 2;
-    printf(ANSI_BACKGROUND_BLUE "│%*s▲%*s│" ANSI_RESET "\n", spaces, "", largeur_pile%2 == 0 ? spaces + 1 : spaces, "");
-    bool top = true;
-    for (int i = ip; i >= 0; i --) {
-        printf(ANSI_BACKGROUND_BLUE "├");
-        print_ligne(largeur_pile, top);
-        top = false;
-        printf("┤" ANSI_RESET "\n");
-        printf(ANSI_BACKGROUND_BLUE "│%*d│" ANSI_RESET "\n", largeur_pile, pile[i]);
-    }
-    printf(ANSI_BACKGROUND_BLUE "└");
-    print_ligne(largeur_pile, top);
-    printf("┘" ANSI_RESET "\n");
-    printf("ip = %d\n", ip);
-    if (procedural) {
-        printf("base = %d\n", base);
-    }
-}
 
 int run(void) {
     int out = 1;
