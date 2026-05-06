@@ -20,8 +20,8 @@ void reserverBloc(void) {
 }
 
 void traStat(int a, int nbp) {
-    pile[ip-nbp] = co+1;
-    base = ip-nbp-1;
+    base = ip-nbp-2;
+    pile[base+1] = co+1;
     co = a - 1;
 }
 

@@ -82,7 +82,7 @@ int run(void) {
         assert(ip >= -1); // Stack underflow
         assert(ip < stack_size); // Stack overflow
         co ++;
-        if (debug) {
+        if (debug && running) {
             print_pile();
         }
     } while (running);
