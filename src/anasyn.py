@@ -11,6 +11,7 @@ import logging
 
 import analex
 from IdentifierTable import IdentifierTable
+from abstractSyntaxTree import AbstractSyntaxTree
 
 logger = logging.getLogger("anasyn")
 
@@ -508,6 +509,11 @@ def main():
         action="store_true",
         help="shows the final identifiers table",
     )
+    parser.add_argument(
+        "--show-tree",
+        action="store_true",
+        help="shows the abstract syntax tree",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.debug)
@@ -530,6 +536,7 @@ def main():
 
     lexical_analyser.init_analyser()
     identifier_table = IdentifierTable()
+    ast = AbstractSyntaxTree()
 
     try:
         program(lexical_analyser, identifier_table)
@@ -541,6 +548,11 @@ def main():
         print("------ IDENTIFIER TABLE ------")
         print(str(identifier_table))
         print("------ END OF IDENTIFIER TABLE ------")
+
+    if args.show_tree:
+        print("------ ABSTRACT SYNTAX TREE ------")
+        print(str(ast))
+        print("------ END OF ABSTRACT SYNTAX TREE ------")
 
     if args.outputfile:
         try:
