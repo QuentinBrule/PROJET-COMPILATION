@@ -26,7 +26,7 @@ void valeurPile(void) {
 void get(void) {
     printf("Veuillez rentrer un nombre : ");
     scanf("%d", &pile[pile[ip]]);
-    // ip -= 1;
+    ip -= 1;
 }
 
 void put(void) {
