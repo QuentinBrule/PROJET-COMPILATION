@@ -20,7 +20,7 @@ void reserverBloc(void) {
 }
 
 void traStat(int a, int nbp) {
-    base = ip-nbp-2;
+    base = ip-nbp-1;
     pile[base+1] = co+1;
     co = a - 1;
 }
@@ -55,7 +55,7 @@ int step(void) {
     else if (instruction("reserverBloc()")) {
         reserverBloc();
     }
-    else if (instruction("traStat(%d;%d)", &a, &nbp)) {
+    else if (instruction("traStat(%d,%d)", &a, &nbp)) {
         traStat(a, nbp);
     }
     else if (instruction("retourFonct()")) {

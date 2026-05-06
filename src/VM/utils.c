@@ -8,15 +8,24 @@ const int stack_size = 32;
 // Dans le cas où l'instruction possède des arguments, alors cette fonction prends le comportement de scanf
 // et remplis les adresses passées en paramètres par ce qui est spécifier dans s
 bool instruction(char* s, ...) {
-    if (strchr(s, '%') == NULL) {
-        return strcmp(po[co], s) == 0;
+    int nombre_entree = 0;
+
+    for (int i = 0; s[i] != '\0'; i++) {
+        if (s[i] == '%') {
+            nombre_entree ++;
+        }
     }
 
-    va_list args;
-    va_start(args, s);
-    int result = vsscanf(po[co], s, args);
-    va_end(args);
-    return result == 1;
+    if (nombre_entree == 0) {
+        return strcmp(po[co], s) == 0;
+    }
+    else {
+        va_list args;
+        va_start(args, s);
+        int result = vsscanf(po[co], s, args);
+        va_end(args);
+        return result == nombre_entree;
+    }
 }
 
 
