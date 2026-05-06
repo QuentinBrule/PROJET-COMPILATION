@@ -95,12 +95,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (strcmp(argv[2], "-d") == 0) {
-        debug = true;
-    }
-    else {
-        debug = false;
-    }
+    debug = (argc == 3 && strcmp(argv[2], "-d") == 0);
     
 
     int nombre_ligne_programme = 0;
