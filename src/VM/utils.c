@@ -1,6 +1,6 @@
 #include "utils.h"
 
-const int stack_size = 32;
+const int stack_size = 2147483647;
 
 // Renvoie vrai si l'instruction passée en paramètre correspond à celle de po[co]
 // Dans le cas où l'instruction possède des arguments, alors cette fonction prends le comportement de scanf
