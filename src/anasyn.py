@@ -629,15 +629,19 @@ def es(lexical_analyser, identifier_table):
     lexical_analyser.acceptCharacter("(")
     _, has_value = expression(lexical_analyser, identifier_table)
     if not has_value :
-            raise AnaSynException(
-                f"Erreur sémantique : Impossible d'appliquer put() à une variable non initialisée"
-            )
+        raise AnaSynException(
+            f"Erreur sémantique : Impossible d'appliquer put() à une variable non initialisée"
+        )
     lexical_analyser.acceptCharacter(")")
 
 
 def boucle(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("while")
-    expression(lexical_analyser, identifier_table)
+    type, has_value = expression(lexical_analyser, identifier_table)
+    if (not has_value) or (type != "boolean") :
+        raise AnaSynException(
+            f"Erreur sémantique : La condition présente après un 'while' doit être booléenne"
+        )
     lexical_analyser.acceptKeyword("loop")
     suiteInstr(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("end")
@@ -645,7 +649,11 @@ def boucle(lexical_analyser, identifier_table):
 
 def altern(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("if")
-    expression(lexical_analyser, identifier_table)
+    type, has_value = expression(lexical_analyser, identifier_table)
+    if (not has_value) or (type != "boolean") :
+        raise AnaSynException(
+            f"Erreur sémantique : La condition présente après un 'if' doit être booléenne"
+        )
     lexical_analyser.acceptKeyword("then")
     suiteInstr(lexical_analyser, identifier_table)
     if lexical_analyser.isKeyword("else"):
