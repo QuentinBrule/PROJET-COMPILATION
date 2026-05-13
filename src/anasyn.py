@@ -270,7 +270,8 @@ def instr(lexical_analyser, identifier_table):
             lexical_analyser.acceptSymbol(":=")
 
             # type de la variable gauche
-            left_type = identifier_table[ident]["type"]
+            info = identifier_table.lookup(ident)
+            left_type = info["type"]
 
             # type de l'expression droite
             right_type = expression(lexical_analyser, identifier_table)
