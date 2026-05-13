@@ -29,9 +29,6 @@ def _require_declared(identifier_table, name, context="identifier"):
         raise AnaSynException(f"Use of undeclared {context}: {name}")
 
 
-########################################################################
-#### Syntactical diagrams
-########################################################################
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
 def program(lexical_analyser, identifier_table):
@@ -46,7 +43,7 @@ def specifProgPrinc(lexical_analyser, identifier_table):
     identifier_table.declare(ident, {"kind": "procedure", "type": "void"})
     logger.debug("Name of program: %s", ident)
 
-
+# ⟨corpsProgPrinc⟩ : := ⟨partieDecla⟩ begin ⟨suiteInstr⟩ end .| begin ⟨suiteInstr⟩ end 
 def corpsProgPrinc(lexical_analyser, identifier_table):
     identifier_table.enter_scope()
 
@@ -83,7 +80,7 @@ def declaOp(lexical_analyser, identifier_table):
         return
     raise AnaSynException(f"Expecting procedure/function declaration, got <{lexical_analyser.get_value()}>")
 
-
+# ⟨procedure⟩ : := procedure ⟨ident⟩ ⟨partieFormelle⟩ is ⟨corpsProc⟩
 def procedure(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     name = lexical_analyser.acceptIdentifier()
@@ -92,7 +89,7 @@ def procedure(lexical_analyser, identifier_table):
     identifier_table.declare(name, entry)
     logger.debug("Name of procedure: %s", name)
 
-    identifier_table.enter_scope()  # formal parameters scope
+    identifier_table.enter_scope()  
     params = []
     if lexical_analyser.isCharacter("("):
         params = partieFormelle(lexical_analyser, identifier_table)
@@ -101,7 +98,7 @@ def procedure(lexical_analyser, identifier_table):
 
     lexical_analyser.acceptKeyword("is")
 
-    identifier_table.enter_scope()  # body scope
+    identifier_table.enter_scope()  
     corpsProc(lexical_analyser, identifier_table)
     identifier_table.exit_scope()
     identifier_table.exit_scope()
@@ -115,7 +112,7 @@ def fonction(lexical_analyser, identifier_table):
     identifier_table.declare(name, entry)
     logger.debug("Name of function: %s", name)
 
-    identifier_table.enter_scope()  # formal parameters scope
+    identifier_table.enter_scope()  
     params = []
     if lexical_analyser.isCharacter("("):
         params = partieFormelle(lexical_analyser, identifier_table)
@@ -126,7 +123,7 @@ def fonction(lexical_analyser, identifier_table):
     entry["type"] = nnpType(lexical_analyser)
     lexical_analyser.acceptKeyword("is")
 
-    identifier_table.enter_scope()  # body scope
+    identifier_table.enter_scope()  
     corpsFonct(lexical_analyser, identifier_table)
     identifier_table.exit_scope()
     identifier_table.exit_scope()
@@ -271,7 +268,19 @@ def instr(lexical_analyser, identifier_table):
 
         if lexical_analyser.isSymbol(":="):
             lexical_analyser.acceptSymbol(":=")
-            expression(lexical_analyser, identifier_table)
+
+            # type de la variable gauche
+            left_type = identifier_table[ident]["type"]
+
+            # type de l'expression droite
+            right_type = expression(lexical_analyser, identifier_table)
+
+            # vérification sémantique
+            if left_type != right_type:
+                raise AnaSynException(
+                    f"Erreur sémantique : affectation interdite de {right_type} dans {left_type}"
+                )
+
             logger.debug("parsed affectation")
             return
 
@@ -297,21 +306,49 @@ def listePe(lex, identifier_table):
 
 # <expression> ::= <exp1> (or <exp1>)?
 def expression(lexical_analyser, identifier_table):
-    exp1(lexical_analyser, identifier_table)
-    if lexical_analyser.isKeyword("or"):
+
+    left_type = exp1(lexical_analyser, identifier_table)
+
+    while lexical_analyser.isKeyword("or"):
+
         lexical_analyser.acceptKeyword("or")
-        exp1(lexical_analyser, identifier_table)
+
+        right_type = exp1(lexical_analyser, identifier_table)
+
+        if left_type != "boolean" or right_type != "boolean":
+            raise AnaSynException(
+                "Erreur sémantique : Opérateur 'or' nécéssite des booleans"
+            )
+
+        left_type = "boolean"
+
+    return left_type
 
 
 def exp1(lexical_analyser, identifier_table):
-    exp2(lexical_analyser, identifier_table)
-    if lexical_analyser.isKeyword("and"):
+
+    left_type = exp2(lexical_analyser, identifier_table)
+
+    while lexical_analyser.isKeyword("and"):
+
         lexical_analyser.acceptKeyword("and")
-        exp2(lexical_analyser, identifier_table)
+
+        right_type = exp2(lexical_analyser, identifier_table)
+
+        if left_type != "boolean" or right_type != "boolean":
+            raise AnaSynException(
+                "Erreur sémantique : Opérateur 'and' nécéssite des booleans"
+            )
+
+        left_type = "boolean"
+
+    return left_type
 
 
 def exp2(lexical_analyser, identifier_table):
-    exp3(lexical_analyser, identifier_table)
+
+    left_type = exp3(lexical_analyser, identifier_table)
+
     if (
         lexical_analyser.isSymbol("<")
         or lexical_analyser.isSymbol("<=")
@@ -320,8 +357,19 @@ def exp2(lexical_analyser, identifier_table):
         or lexical_analyser.isSymbol("=")
         or lexical_analyser.isSymbol("/=")
     ):
+
         opRel(lexical_analyser)
-        exp3(lexical_analyser, identifier_table)
+
+        right_type = exp3(lexical_analyser, identifier_table)
+
+        if left_type != right_type:
+            raise AnaSynException(
+                "Erreur sémantique : type incompatible dans la comparaison"
+            )
+
+        return "boolean"
+
+    return left_type
 
 
 def opRel(lexical_analyser):
@@ -352,6 +400,25 @@ def exp3(lexical_analyser, identifier_table):
         opAdd(lexical_analyser)
         exp4(lexical_analyser, identifier_table)
 
+def exp3(lexical_analyser, identifier_table):
+
+    left_type = exp4(lexical_analyser, identifier_table)
+
+    while lexical_analyser.isCharacter("+") or lexical_analyser.isCharacter("-"):
+
+        opAdd(lexical_analyser)
+
+        right_type = exp4(lexical_analyser, identifier_table)
+
+        if left_type != "integer" or right_type != "integer":
+            raise AnaSynException(
+                "Erreur sémantique : opérations arithmétiques + et - nécessitent des integers"
+            )
+
+        left_type = "integer"
+
+    return left_type
+
 
 def opAdd(lexical_analyser):
     if lexical_analyser.isCharacter("+"):
@@ -364,10 +431,23 @@ def opAdd(lexical_analyser):
 
 
 def exp4(lexical_analyser, identifier_table):
-    prim(lexical_analyser, identifier_table)
-    if lexical_analyser.isCharacter("*") or lexical_analyser.isCharacter("/"):
+
+    left_type = prim(lexical_analyser, identifier_table)
+
+    while lexical_analyser.isCharacter("*") or lexical_analyser.isCharacter("/"):
+
         opMult(lexical_analyser)
-        prim(lexical_analyser, identifier_table)
+
+        right_type = prim(lexical_analyser, identifier_table)
+
+        if left_type != "integer" or right_type != "integer":
+            raise AnaSynException(
+                "Erreur sémantique : opérations arithmétiques * et / nécessitent des integers"
+            )
+
+        left_type = "integer"
+
+    return left_type
 
 
 def opMult(lexical_analyser):
@@ -381,13 +461,35 @@ def opMult(lexical_analyser):
 
 
 def prim(lexical_analyser, identifier_table):
-    if (
-        lexical_analyser.isCharacter("+")
-        or lexical_analyser.isCharacter("-")
-        or lexical_analyser.isKeyword("not")
-    ):
+
+    if lexical_analyser.isKeyword("not"):
+
         opUnaire(lexical_analyser)
-    elemPrim(lexical_analyser, identifier_table)
+
+        t = elemPrim(lexical_analyser, identifier_table)
+
+        if t != "boolean":
+            raise AnaSynException(
+                "'not' requires boolean"
+            )
+
+        return "boolean"
+
+    if lexical_analyser.isCharacter("+") \
+       or lexical_analyser.isCharacter("-"):
+
+        opUnaire(lexical_analyser)
+
+        t = elemPrim(lexical_analyser, identifier_table)
+
+        if t != "integer":
+            raise AnaSynException(
+                "Unary +/- require integer"
+            )
+
+        return "integer"
+
+    return elemPrim(lexical_analyser, identifier_table)
 
 
 def opUnaire(lexical_analyser):
@@ -402,47 +504,97 @@ def opUnaire(lexical_analyser):
         return "not"
     raise AnaSynException(f"Unknown unary operator <{lexical_analyser.get_value()}>")
 
-
 def elemPrim(lexical_analyser, identifier_table):
+
+    # ( expression )
     if lexical_analyser.isCharacter("("):
+
         lexical_analyser.acceptCharacter("(")
-        expression(lexical_analyser, identifier_table)
+
+        expr_type = expression(
+            lexical_analyser,
+            identifier_table
+        )
+
         lexical_analyser.acceptCharacter(")")
-        return
 
-    if lexical_analyser.isInteger() or lexical_analyser.isKeyword("true") or lexical_analyser.isKeyword("false"):
-        valeur(lexical_analyser)
-        return
+        return expr_type
 
+
+    # entier | booléen
+    if lexical_analyser.isInteger() \
+       or lexical_analyser.isKeyword("true") \
+       or lexical_analyser.isKeyword("false"):
+
+        return valeur(lexical_analyser)
+
+
+    # identificateur / appel fonction
     if lexical_analyser.isIdentifier():
-        ident = lexical_analyser.acceptIdentifier()
-        _require_declared(identifier_table, ident)
 
+        ident = lexical_analyser.acceptIdentifier()
+
+        info = identifier_table.lookup(ident)
+
+        if info is None:
+            raise AnaSynException(
+                f"Identifier '{ident}' not declared"
+            )
+
+
+        # appel de fonction
         if lexical_analyser.isCharacter("("):
+
             lexical_analyser.acceptCharacter("(")
+
             if not lexical_analyser.isCharacter(")"):
-                listePe(lexical_analyser, identifier_table)
+
+                listePe(
+                    lexical_analyser,
+                    identifier_table
+                )
+
             lexical_analyser.acceptCharacter(")")
-        return
+
+
+            # vérification : c'est bien une fonction
+            if info["kind"] != "function":
+
+                raise AnaSynException(
+                    f"'{ident}' is not a function"
+                )
+
+            return info["return_type"]
+
+
+        # variable simple
+        return info["type"]
+
 
     raise AnaSynException("Unknown value!")
 
-
 def valeur(lexical_analyser):
-    if lexical_analyser.isInteger():
-        return lexical_analyser.acceptInteger()
-    if lexical_analyser.isKeyword("true") or lexical_analyser.isKeyword("false"):
-        return valBool(lexical_analyser)
-    raise AnaSynException("Unknown value! Expecting an integer or a boolean value!")
 
+    if lexical_analyser.isInteger():
+        lexical_analyser.acceptInteger()
+        return "integer"
+
+    if lexical_analyser.isKeyword("true") \
+       or lexical_analyser.isKeyword("false"):
+
+        valBool(lexical_analyser)
+        return "boolean"
+
+    raise AnaSynException(
+        "Erreur sémantique : normalement il faut un integer ou un boolean"
+    )
 
 def valBool(lexical_analyser):
+
     if lexical_analyser.isKeyword("true"):
         lexical_analyser.acceptKeyword("true")
-        return True
-    lexical_analyser.acceptKeyword("false")
-    return False
-
+    else:
+        lexical_analyser.acceptKeyword("false")
 
 def es(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("get"):
@@ -483,7 +635,6 @@ def retour(lexical_analyser, identifier_table):
     expression(lexical_analyser, identifier_table)
 
 
-########################################################################
 def main():
     parser = argparse.ArgumentParser(description="Do the syntactical analysis of a NNP program.")
     parser.add_argument("inputfile", type=str, nargs=1, help="name of the input source file")
@@ -495,7 +646,6 @@ def main():
         default="",
         help="name of the output file (default: stdout)",
     )
-    parser.add_argument("-v", "--version", action="version", version="%(prog)s 1.0")
     parser.add_argument(
         "-d",
         "--debug",
@@ -516,33 +666,43 @@ def main():
     )
     args = parser.parse_args()
 
+    # create logger
+    LOGGING_LEVEL = args.debug
     logger.setLevel(args.debug)
     ch = logging.StreamHandler()
-    ch.setLevel(args.debug)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setLevel(LOGGING_LEVEL)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
-    logger.handlers.clear()
     logger.addHandler(ch)
 
+    # pseudo-code flag (actuellement inutile)
+    #if args.pseudo_code:
+    #    True
+    #else:
+    #    False
+
     filename = args.inputfile[0]
+
     try:
-        with open(filename, "r") as f:
-            lexical_analyser = analex.LexicalAnalyser()
-            for line_index, line in enumerate(f):
-                lexical_analyser.analyse_line(line_index, line.rstrip("\r\n"))
-    except OSError:
-        print("Error: can't open input file!", file=sys.stderr)
-        return 2
+        f = open(filename, 'r')
+    except:
+        print("Error: can't open input file!")
+        return
+
+    lexical_analyser = analex.LexicalAnalyser()
+
+    lineIndex = 0
+    for line in f:
+        line = line.rstrip('\r\n')
+        lexical_analyser.analyse_line(lineIndex, line)
+        lineIndex += 1
+    f.close()
 
     lexical_analyser.init_analyser()
     identifier_table = IdentifierTable()
     ast = AbstractSyntaxTree()
 
-    try:
-        program(lexical_analyser, identifier_table)
-    except (analex.AnaLexException, AnaSynException) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
+    program(lexical_analyser, identifier_table)
 
     if args.show_indent_table:
         print("------ IDENTIFIER TABLE ------")
@@ -556,13 +716,12 @@ def main():
 
     if args.outputfile:
         try:
-            with open(args.outputfile, "w") as output_file:
-                output_file.write("")
-        except OSError:
-            print("Error: can't open output file!", file=sys.stderr)
-            return 2
+            output_file = open(args.outputfile, 'w')
+        except:
+            print("Error: can't open output file!")
+            return
 
-    return 0
+        output_file.close()
 
 
 if __name__ == "__main__":
