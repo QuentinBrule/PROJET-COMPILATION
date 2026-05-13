@@ -28,6 +28,10 @@ def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
         raise AnaSynException(f"Use of undeclared {context}: {name}")
 
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Use of undeclared {context}: {name}")
+
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
@@ -221,7 +225,7 @@ def declaVar(lexical_analyser, identifier_table):
     lexical_analyser.acceptCharacter(";")
 
     for ident in idents:
-        identifier_table.declare(ident, {"kind": "variable", "type": var_type})
+        identifier_table.declare(ident, {"kind": "variable", "type": var_type, "has_value": False})
 
 
 # <listeIdent> ::= ident (, ident)*
@@ -264,6 +268,7 @@ def instr(lexical_analyser, identifier_table):
         return
 
     ## Vérification de type lors d'une affectation
+    # ⟨affectation⟩ : := ⟨ident⟩ := ⟨expression⟩
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
         _require_declared(identifier_table, ident)
@@ -284,6 +289,7 @@ def instr(lexical_analyser, identifier_table):
                     f"Erreur sémantique : affectation interdite de {right_type} dans {left_type}"
                 )
 
+            info["has_value"] = True
             logger.debug("parsed affectation")
             return
 
@@ -609,11 +615,17 @@ def valBool(lexical_analyser):
     else:
         lexical_analyser.acceptKeyword("false")
 
+# ⟨es⟩ : := get ( ⟨ident⟩ ) | put ( ⟨expression⟩ )
 def es(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("get"):
         lexical_analyser.acceptKeyword("get")
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
+        info = identifier_table.lookup(ident)
+        if not info["has_value"] :
+            raise AnaSynException(
+                f"Erreur sémantique : Variable {ident} non initialisée"
+            )
         _require_declared(identifier_table, ident)
         lexical_analyser.acceptCharacter(")")
         return
