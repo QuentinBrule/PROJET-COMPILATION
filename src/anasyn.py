@@ -262,6 +262,8 @@ def instr(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("return"):
         retour(lexical_analyser, identifier_table)
         return
+
+    ## Vérification de type lors d'une affectation
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
         _require_declared(identifier_table, ident)
@@ -326,6 +328,7 @@ def expression(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨exp1⟩ : := ⟨exp1⟩ and ⟨exp2⟩ | ⟨exp2⟩
 def exp1(lexical_analyser, identifier_table):
 
     left_type = exp2(lexical_analyser, identifier_table)
@@ -346,6 +349,7 @@ def exp1(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨exp2⟩ : := ⟨exp2⟩ ⟨opRel⟩ ⟨exp3⟩ | ⟨exp3⟩
 def exp2(lexical_analyser, identifier_table):
 
     left_type = exp3(lexical_analyser, identifier_table)
@@ -373,6 +377,7 @@ def exp2(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opRel⟩ : := = | /= | < | <= | > | >=
 def opRel(lexical_analyser):
     if lexical_analyser.isSymbol("<"):
         lexical_analyser.acceptSymbol("<")
@@ -421,6 +426,7 @@ def exp3(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opAd⟩ : := + | -
 def opAdd(lexical_analyser):
     if lexical_analyser.isCharacter("+"):
         lexical_analyser.acceptCharacter("+")
@@ -431,6 +437,7 @@ def opAdd(lexical_analyser):
     raise AnaSynException(f"Unknown additive operator <{lexical_analyser.get_value()}>")
 
 
+# ⟨exp4⟩ : := ⟨exp4⟩ ⟨opMult⟩ ⟨prim⟩ | ⟨prim⟩
 def exp4(lexical_analyser, identifier_table):
 
     left_type = prim(lexical_analyser, identifier_table)
@@ -451,6 +458,7 @@ def exp4(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opMult⟩ : := * | /
 def opMult(lexical_analyser):
     if lexical_analyser.isCharacter("*"):
         lexical_analyser.acceptCharacter("*")
@@ -461,6 +469,7 @@ def opMult(lexical_analyser):
     raise AnaSynException(f"Unknown multiplicative operator <{lexical_analyser.get_value()}>")
 
 
+# ⟨prim⟩ : := ⟨opUnaire⟩ ⟨elemPrim⟩ | ⟨elemPrim⟩
 def prim(lexical_analyser, identifier_table):
 
     if lexical_analyser.isKeyword("not"):
@@ -493,6 +502,7 @@ def prim(lexical_analyser, identifier_table):
     return elemPrim(lexical_analyser, identifier_table)
 
 
+# ⟨opUnaire⟩ : := + | - | not
 def opUnaire(lexical_analyser):
     if lexical_analyser.isCharacter("+"):
         lexical_analyser.acceptCharacter("+")
@@ -531,6 +541,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
 
     # identificateur / appel fonction
+    # ⟨appelFonct⟩ : := ⟨ident⟩ ( ⟨listePe⟩ ) | ⟨ident⟩ ( )
     if lexical_analyser.isIdentifier():
 
         ident = lexical_analyser.acceptIdentifier()
@@ -574,6 +585,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
     raise AnaSynException("Unknown value!")
 
+# ⟨valeur⟩ : := ⟨entier⟩ | ⟨valBool⟩
 def valeur(lexical_analyser):
 
     if lexical_analyser.isInteger():

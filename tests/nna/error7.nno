@@ -1,0 +1,12 @@
+//-----------------------------------------------
+//  programme incorrect
+//  
+//  M. Guyomard
+//  affectation : typage incorrect : entier dans booleen
+//-----------------------------------------------  
+
+procedure e is
+  b: boolean;
+begin
+  b:=3  //mess. erreur attendu ici
+end.
