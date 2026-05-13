@@ -4,9 +4,9 @@ class IdentifierTable:
         # Les scopes sont identifiés par un id, avec un parent (scope englobant).
         self._next_scope_id = 0
         self._scope_order = []
-        self._scopes = {}          # scope_id -> dict(name -> info)
-        self._parents = {}         # scope_id -> parent_scope_id | None
-        self._active_stack = []    # stack of active scope_ids (0 = global)
+        self._scopes = {}          
+        self._parents = {}         
+        self._active_stack = []    
 
         global_id = self._new_scope(parent_scope_id=None)
         self._active_stack.append(global_id)
@@ -32,7 +32,8 @@ class IdentifierTable:
         self._active_stack.pop()
 
     def declare(self, name, info):
-        """Ajouter un identificateur dans la table."""
+        """Ajouter un identificateur dans la table.
+        Lève une exception si l'identificateur est déjà présent"""
         current_scope = self._scopes[self._active_stack[-1]]
 
         if name in current_scope:
