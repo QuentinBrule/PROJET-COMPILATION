@@ -1,0 +1,32 @@
+//----------------------------------------------------
+// Programme vennant de l'annexe
+// pages 46
+//
+//
+// Code compilé dans tests/code_objet/exemple_nnp
+//
+//------------------------------------------------------
+procedure pp is
+    function f(i: integer) return integer is
+        //pré: i>=0
+    begin
+        if i=0 then
+            return 1
+        else
+            if i=1 then
+                return 2
+            else
+                return i+f(i-1)+f(i-2)
+            end
+        end
+    end ;
+    procedure p(j: in out integer) is
+    begin
+        j:=f(f(j))
+    end;
+    k: integer;
+begin
+    get(k) ;
+    p(k) ;
+    put(k)
+end.
