@@ -130,3 +130,96 @@ class AppelFonction(NoeudAST):
     def __init__(self, nom, arguments):
         self.nom = nom
         self.arguments = arguments  # list[NoeudAST]
+
+# ---------------------------------------------------------------------------
+# Classe mère pour les appels de procédures et fonctions
+# ---------------------------------------------------------------------------
+
+class AbstractSyntaxTree:
+    def __init__(self):
+        self.root: "Programme | None" = None
+
+    def __str__(self):
+        if self.root is None:
+            return "(arbre vide)"
+        return _afficher(self.root, 0)
+
+# ---------------------------------------------------------------------------
+# Affichage de l'AST
+# ---------------------------------------------------------------------------
+
+def _afficher(noeud, indent):
+    prefixe = "  " * indent
+    nom_classe = type(noeud).__name__
+
+    if isinstance(noeud, Programme):
+        lignes = [f"{prefixe}Programme({noeud.nom})"]
+        if noeud.declarations:
+            lignes.append(_afficher(noeud.declarations, indent + 1))
+        for instr in noeud.instructions:
+            lignes.append(_afficher(instr, indent + 1))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, DeclarationVariables):
+        lignes = [f"{prefixe}DeclarationVariables"]
+        for d in noeud.variables:
+            lignes.append(_afficher(d, indent + 1))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, DeclarationVariable):
+        return f"{prefixe}DeclarationVariable({', '.join(noeud.noms)} : {noeud.type_var})"
+
+    if isinstance(noeud, Affectation):
+        return (f"{prefixe}Affectation({noeud.cible})\n"
+                + _afficher(noeud.expression, indent + 1))
+
+    if isinstance(noeud, OperationBinaire):
+        return (f"{prefixe}OpBinaire({noeud.operateur})\n"
+                + _afficher(noeud.gauche, indent + 1) + "\n"
+                + _afficher(noeud.droite, indent + 1))
+
+    if isinstance(noeud, OperationUnaire):
+        return (f"{prefixe}OpUnaire({noeud.operateur})\n"
+                + _afficher(noeud.operande, indent + 1))
+
+    if isinstance(noeud, Identifiant):
+        return f"{prefixe}Identifiant({noeud.nom})"
+
+    if isinstance(noeud, Nombre):
+        return f"{prefixe}Nombre({noeud.valeur})"
+
+    if isinstance(noeud, Booleen):
+        return f"{prefixe}Booleen({'true' if noeud.valeur else 'false'})"
+
+    if isinstance(noeud, Si):
+        lignes = [f"{prefixe}Si", _afficher(noeud.condition, indent + 1), f"{prefixe}  Alors"]
+        for i in noeud.alors:
+            lignes.append(_afficher(i, indent + 2))
+        if noeud.sinon:
+            lignes.append(f"{prefixe}  Sinon")
+            for i in noeud.sinon:
+                lignes.append(_afficher(i, indent + 2))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, TantQue):
+        lignes = [f"{prefixe}TantQue", _afficher(noeud.condition, indent + 1)]
+        for i in noeud.corps:
+            lignes.append(_afficher(i, indent + 2))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, Lecture):
+        return f"{prefixe}Lecture({noeud.cible})"
+
+    if isinstance(noeud, Ecriture):
+        return f"{prefixe}Ecriture\n" + _afficher(noeud.expression, indent + 1)
+
+    if isinstance(noeud, (AppelProcedure, AppelFonction)):
+        lignes = [f"{prefixe}{nom_classe}({noeud.nom})"]
+        for arg in noeud.arguments:
+            lignes.append(_afficher(arg, indent + 1))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, Retourner):
+        return f"{prefixe}Retourne\n" + _afficher(noeud.expression, indent + 1)
+
+    return f"{prefixe}{nom_classe}"
