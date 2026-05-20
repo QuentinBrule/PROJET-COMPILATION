@@ -103,7 +103,7 @@ class LexicalUnit(object):
         ## Returns the object as a formatted string
 	def __str__(self):
 		unitValue = {'classname':self.__class__.__name__,'lIdx':self.line_index,'cIdx':self.col_index,'length':self.length,'value':self.value}
-		return '%(classname)s\t%(lIdx)d\t%(cIdx)d\t%(length)d\t%(value)s\n' % unitValue
+		return '%(classname)-12s\t%(lIdx)d\t%(cIdx)d\t%(length)d\t%(value)s\n' % unitValue
 
 ## Class to represent Identifiers
 #
@@ -180,7 +180,7 @@ class Fel(LexicalUnit):
 ## Lexical analyser class
 #
 class LexicalAnalyser(object):	
-        ## Attribute to store the different lexical units
+    ## Attribute to store the different lexical units
 	lexical_units = []
 
         ## Index used to keep track of the lexical unit under treatment
@@ -195,7 +195,7 @@ class LexicalAnalyser(object):
         # @param lineIndex index of the line in the original text
         # @param line the lien of text to analyse
 	def analyse_line(self, lineIndex, line):
-		space = re.compile("\s")
+		space = re.compile(r"\s")
 		digit = re.compile("[0-9]")
 		char = re.compile("[a-zA-Z]")
 		beginColIndex = 0
@@ -301,8 +301,13 @@ class LexicalAnalyser(object):
 		else:
 			output_file = sys.stdout
 		
+		# Ajouter l'en-tête
+		output_file.write("%-15s\t%-6s\t%-6s\t%-8s\t%-15s\n" % ("Type", "Line", "Col", "Length", "Value"))
+		output_file.write("-" * 70 + "\n")
+		
 		for lexicalUnit in self.lexical_units:
-			output_file.write("%s" % lexicalUnit)
+			classname = lexicalUnit.__class__.__name__
+			output_file.write("%-15s\t%-6d\t%-6d\t%-8d\t%-15s\n" % (classname, lexicalUnit.line_index, lexicalUnit.col_index, lexicalUnit.length, lexicalUnit.value))
 			
 		if filename != "":
 			output_file.close()
