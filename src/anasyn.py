@@ -229,9 +229,9 @@ def declaVar(lexical_analyser, identifier_table):
     for ident in idents:
         identifier_table.declare(ident, {"kind": "variable", "type": var_type, "has_value": False})
         nbParam = nbParam + 1
-        print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
+        #print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
 
-    print(f"reserver({nbParam})")
+    #print(f"reserver({nbParam})")
 
 # <listeIdent> ::= ident (, ident)*
 def listeIdent(lexical_analyser):
@@ -276,7 +276,7 @@ def instr(lexical_analyser, identifier_table):
     # ⟨affectation⟩ : := ⟨ident⟩ := ⟨expression⟩
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
-        print(f"empilerAd(as(<{ident}>));")
+        #print(f"empilerAd(as(<{ident}>));")
         _require_declared(identifier_table, ident)
 
         if lexical_analyser.isSymbol(":="):
@@ -297,7 +297,7 @@ def instr(lexical_analyser, identifier_table):
 
             info["has_value"] = True
             logger.debug("parsed affectation")
-            print("affectation()")
+            #print("affectation()")
             return
 
         if lexical_analyser.isCharacter("("):
