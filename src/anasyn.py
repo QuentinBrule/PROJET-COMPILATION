@@ -7,6 +7,7 @@
 
 import argparse
 import logging
+import sys
 
 import analex
 from IdentifierTable import IdentifierTable
@@ -33,7 +34,11 @@ class AnaSynException(Exception):
 
 def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Use of undeclared {context}: {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
+
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
@@ -47,7 +52,7 @@ def program(lexical_analyser, identifier_table):
 def specifProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     ident = lexical_analyser.acceptIdentifier()
-    identifier_table.declare(ident, {"kind": "procedure", "type": "void"})
+    identifier_table.declare(ident, {"kind": "procedure", "type": "void", "has_value": True})
     logger.debug("Name of program: %s", ident)
     return ident
 
@@ -93,7 +98,7 @@ def declaOp(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("function"):
         fonction(lexical_analyser, identifier_table)
         return
-    raise AnaSynException(f"Expecting procedure/function declaration, got <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Déclaration de fonction / procédure attendue, mais <{lexical_analyser.get_value()}> obtenu")
 
 
 # ⟨procedure⟩ ::= procedure ⟨ident⟩ ⟨partieFormelle⟩ is ⟨corpsProc⟩
@@ -101,7 +106,7 @@ def procedure(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void"}
+    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void", "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of procedure: %s", name)
 
@@ -124,7 +129,7 @@ def fonction(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("function")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None}
+    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None, "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of function: %s", name)
 
@@ -189,7 +194,7 @@ def specif(lex, identifier_table):
     typ = nnpType(lex)
     params = []
     for ident in idents:
-        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ})
+        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ, "has_value": True})
         params.append({"name": ident, "mode": param_mode, "type": typ})
     return params
 
@@ -209,7 +214,7 @@ def nnpType(lexical_analyser):
     if lexical_analyser.isKeyword("boolean"):
         lexical_analyser.acceptKeyword("boolean")
         return "boolean"
-    raise AnaSynException(f"Unknown type found <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Type <{lexical_analyser.get_value()}> non reconnu")
 
 
 def partieDeclaProc(lexical_analyser, identifier_table):
@@ -284,7 +289,7 @@ def instr(lexical_analyser, identifier_table):
             right_type, _, noeud_expr = expression(lexical_analyser, identifier_table)
             if left_type != right_type:
                 raise AnaSynException(
-                    f"Erreur sémantique : affectation interdite de {right_type} dans {left_type}"
+                    f"Erreur sémantique : Affectation interdite de {right_type} dans {left_type}"
                 )
             info["has_value"] = True
             logger.debug("parsed affectation")
@@ -299,9 +304,9 @@ def instr(lexical_analyser, identifier_table):
             logger.debug("parsed call: %s", ident)
             return AppelProcedure(nom=ident, arguments=args)
 
-        raise AnaSynException("Expecting procedure call or affectation!")
+        raise AnaSynException("Erreur sémantique : Affectation ou appel de procédure attendu")
 
-    raise AnaSynException(f"Unknown instruction <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Instruction <{lexical_analyser.get_value()}> non reconnue")
 
 
 def listePe(lex, identifier_table):
@@ -479,11 +484,11 @@ def elemPrim(lexical_analyser, identifier_table):
             lexical_analyser.acceptCharacter(")")
             if info["kind"] != "function":
                 raise AnaSynException(f"'{ident}' is not a function")
-            return (info["return_type"], True, AppelFonction(ident, args))
+            return (info["type"], True, AppelFonction(ident, args))
 
         return (info["type"], info.get("has_value", True), Identifiant(ident))
 
-    raise AnaSynException("Unknown value!")
+    raise AnaSynException(f"Erreur sémantique : Valeur inconnue")
 
 
 # ⟨valeur⟩ ::= ⟨entier⟩ | ⟨valBool⟩
@@ -514,7 +519,10 @@ def es(lexical_analyser, identifier_table):
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
         _require_declared(identifier_table, ident)
-        identifier_table.lookup(ident)["has_value"] = True  # get() initialise la variable
+        info = identifier_table.lookup(ident)
+        if info["type"] != "integer":
+            raise AnaSynException(f"Erreur sémantique : Variable <{ident}> doit être un integer")
+        info["has_value"] = True
         lexical_analyser.acceptCharacter(")")
         return Lecture(cible=ident)
 
@@ -587,12 +595,14 @@ def main():
         f = open(filename, 'r')
     except:
         print("Error: can't open input file!")
-        return
+        return 1
 
     lexical_analyser = analex.LexicalAnalyser()
     lineIndex = 0
+    source_lines = []
     for line in f:
         line = line.rstrip('\r\n')
+        source_lines.append(line)
         lexical_analyser.analyse_line(lineIndex, line)
         lineIndex += 1
     f.close()
@@ -601,7 +611,17 @@ def main():
     identifier_table = IdentifierTable()
     ast = AbstractSyntaxTree()
 
-    ast.root = program(lexical_analyser, identifier_table)
+    try:
+        ast.root = program(lexical_analyser, identifier_table)
+    except AnaSynException as e:
+        msg = str(e.value)
+        print(msg, file=sys.stderr)
+        line_idx, col_idx = lexical_analyser.get_current_location()
+        if line_idx is not None and 0 <= line_idx < len(source_lines):
+            display_line = line_idx + 1
+            display_col = (col_idx + 1) if col_idx is not None else 1
+            print(f"--> {filename}:{display_line}:{display_col}", file=sys.stderr)
+        return 2
 
     if args.show_indent_table:
         print("------ IDENTIFIER TABLE ------")
@@ -616,6 +636,8 @@ def main():
     generateur = GenerateurCodeNilNovi()
     generateur.generer(ast.root)
     generateur.sauvegarder(args.outputfile)
+
+    return 0
 
 
 if __name__ == "__main__":
