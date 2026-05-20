@@ -10,7 +10,7 @@ import logging
 
 import analex
 from IdentifierTable import IdentifierTable
-from compiler import GenerateurCodeNilNovi
+from GenerateurCodeNilNovi import GenerateurCodeNilNovi
 from abstractSyntaxTree import (
     AbstractSyntaxTree,
     Programme, DeclarationVariables, DeclarationVariable,
