@@ -1,0 +1,19 @@
+//----------------------------------------------------
+// Programme vennant de l'annexe
+// pages 19-20
+//
+//
+// Code compilé dans tests/code_objet/exemple_nna
+//
+//------------------------------------------------------
+procedure p is
+    v, som : integer ; // v : 0; som : 1
+begin
+    get(v) ;
+    som :=0 ;
+    while v/=0 loop
+        som:=som+v;
+        get(v)
+    end ;
+    put(som)
+end.

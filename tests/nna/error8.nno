@@ -2,10 +2,10 @@
 //  programme incorrect
 //  
 //  M. Guyomard
-//  type non existant
+//  double declaration variable
 //-----------------------------------------------  
 procedure pp is
-  e,e:a;				//mess. erreur attendu
+  e,e:integer;				//mess. erreur attendu
 begin
   put(15)
 end.

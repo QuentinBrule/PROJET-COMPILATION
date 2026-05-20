@@ -11,6 +11,7 @@ import logging
 
 import analex
 from IdentifierTable import IdentifierTable
+from abstractSyntaxTree import AbstractSyntaxTree
 
 logger = logging.getLogger("anasyn")
 
@@ -42,7 +43,6 @@ def program(lexical_analyser, identifier_table):
 
 def specifProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
-    #print("debutProg(); tra(ad1);")
     ident = lexical_analyser.acceptIdentifier()
     identifier_table.declare(ident, {"kind": "procedure", "type": "void"})
     logger.debug("Name of program: %s", ident)
@@ -179,12 +179,11 @@ def specif(lex, identifier_table):
     param_mode = "in"
     if lex.isKeyword("in"):
         param_mode = mode_param(lex)
-        
+
     typ = nnpType(lex)
 
     params = []
     for ident in idents:
-        print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
         identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ})
         params.append({"name": ident, "mode": param_mode, "type": typ})
     return params
@@ -288,7 +287,7 @@ def instr(lexical_analyser, identifier_table):
             left_type = info["type"]
 
             # type de l'expression droite
-            right_type = expression(lexical_analyser, identifier_table)
+            right_type, _ = expression(lexical_analyser, identifier_table)
 
             # vérification sémantique
             if left_type != right_type:
@@ -324,13 +323,13 @@ def listePe(lex, identifier_table):
 # <expression> ::= <exp1> (or <exp1>)?
 def expression(lexical_analyser, identifier_table):
 
-    left_type = exp1(lexical_analyser, identifier_table)
+    left_type, has_value = exp1(lexical_analyser, identifier_table)
 
     while lexical_analyser.isKeyword("or"):
 
         lexical_analyser.acceptKeyword("or")
 
-        right_type = exp1(lexical_analyser, identifier_table)
+        right_type, _ = exp1(lexical_analyser, identifier_table)
 
         if left_type != "boolean" or right_type != "boolean":
             raise AnaSynException(
@@ -339,19 +338,19 @@ def expression(lexical_analyser, identifier_table):
 
         left_type = "boolean"
 
-    return left_type
+    return (left_type, has_value)
 
 
 # ⟨exp1⟩ : := ⟨exp1⟩ and ⟨exp2⟩ | ⟨exp2⟩
 def exp1(lexical_analyser, identifier_table):
 
-    left_type = exp2(lexical_analyser, identifier_table)
+    left_type, has_value = exp2(lexical_analyser, identifier_table)
 
     while lexical_analyser.isKeyword("and"):
 
         lexical_analyser.acceptKeyword("and")
 
-        right_type = exp2(lexical_analyser, identifier_table)
+        right_type, _ = exp2(lexical_analyser, identifier_table)
 
         if left_type != "boolean" or right_type != "boolean":
             raise AnaSynException(
@@ -360,13 +359,13 @@ def exp1(lexical_analyser, identifier_table):
 
         left_type = "boolean"
 
-    return left_type
+    return (left_type, has_value)
 
 
 # ⟨exp2⟩ : := ⟨exp2⟩ ⟨opRel⟩ ⟨exp3⟩ | ⟨exp3⟩
 def exp2(lexical_analyser, identifier_table):
 
-    left_type = exp3(lexical_analyser, identifier_table)
+    left_type, has_value = exp3(lexical_analyser, identifier_table)
 
     if (
         lexical_analyser.isSymbol("<")
@@ -379,16 +378,16 @@ def exp2(lexical_analyser, identifier_table):
 
         opRel(lexical_analyser)
 
-        right_type = exp3(lexical_analyser, identifier_table)
+        right_type, _ = exp3(lexical_analyser, identifier_table)
 
         if left_type != right_type:
             raise AnaSynException(
                 "Erreur sémantique : type incompatible dans la comparaison"
             )
 
-        return "boolean"
+        return ("boolean", True)
 
-    return left_type
+    return (left_type, has_value)
 
 
 # ⟨opRel⟩ : := = | /= | < | <= | > | >=
@@ -414,30 +413,25 @@ def opRel(lexical_analyser):
     raise AnaSynException(f"Unknown relationnal operator <{lexical_analyser.get_value()}>")
 
 
-def exp3(lexical_analyser, identifier_table):
-    exp4(lexical_analyser, identifier_table)
-    if lexical_analyser.isCharacter("+") or lexical_analyser.isCharacter("-"):
-        opAdd(lexical_analyser)
-        exp4(lexical_analyser, identifier_table)
-
+# ⟨exp3⟩ : := ⟨exp3⟩ ⟨opAd⟩ ⟨exp4⟩ | ⟨exp4⟩
 def exp3(lexical_analyser, identifier_table):
 
-    left_type = exp4(lexical_analyser, identifier_table)
+    left_type, has_value = exp4(lexical_analyser, identifier_table)
 
     while lexical_analyser.isCharacter("+") or lexical_analyser.isCharacter("-"):
 
         opAdd(lexical_analyser)
 
-        right_type = exp4(lexical_analyser, identifier_table)
+        right_type, _ = exp4(lexical_analyser, identifier_table)
 
         if left_type != "integer" or right_type != "integer":
             raise AnaSynException(
-                "Erreur sémantique : opérations arithmétiques + et - nécessitent des integers"
+                "Erreur sémantique : opérations arithmétiques + et - nécessitent des entiers"
             )
 
         left_type = "integer"
 
-    return left_type
+    return (left_type, has_value)
 
 
 # ⟨opAd⟩ : := + | -
@@ -454,13 +448,13 @@ def opAdd(lexical_analyser):
 # ⟨exp4⟩ : := ⟨exp4⟩ ⟨opMult⟩ ⟨prim⟩ | ⟨prim⟩
 def exp4(lexical_analyser, identifier_table):
 
-    left_type = prim(lexical_analyser, identifier_table)
+    left_type, has_value = prim(lexical_analyser, identifier_table)
 
     while lexical_analyser.isCharacter("*") or lexical_analyser.isCharacter("/"):
 
         opMult(lexical_analyser)
 
-        right_type = prim(lexical_analyser, identifier_table)
+        right_type, _ = prim(lexical_analyser, identifier_table)
 
         if left_type != "integer" or right_type != "integer":
             raise AnaSynException(
@@ -469,7 +463,7 @@ def exp4(lexical_analyser, identifier_table):
 
         left_type = "integer"
 
-    return left_type
+    return (left_type, has_value)
 
 
 # ⟨opMult⟩ : := * | /
@@ -490,28 +484,28 @@ def prim(lexical_analyser, identifier_table):
 
         opUnaire(lexical_analyser)
 
-        t = elemPrim(lexical_analyser, identifier_table)
+        t, has_value = elemPrim(lexical_analyser, identifier_table)
 
         if t != "boolean":
             raise AnaSynException(
                 "'not' requires boolean"
             )
 
-        return "boolean"
+        return ("boolean", has_value)
 
     if lexical_analyser.isCharacter("+") \
        or lexical_analyser.isCharacter("-"):
 
         opUnaire(lexical_analyser)
 
-        t = elemPrim(lexical_analyser, identifier_table)
+        t, has_value = elemPrim(lexical_analyser, identifier_table)
 
         if t != "integer":
             raise AnaSynException(
                 "Unary +/- require integer"
             )
 
-        return "integer"
+        return ("integer", has_value)
 
     return elemPrim(lexical_analyser, identifier_table)
 
@@ -529,33 +523,33 @@ def opUnaire(lexical_analyser):
         return "not"
     raise AnaSynException(f"Unknown unary operator <{lexical_analyser.get_value()}>")
 
+# ⟨elemPrim⟩ : := ⟨valeur⟩ | ( ⟨expression⟩ ) | ⟨ident⟩ | ⟨appelFonct⟩
 def elemPrim(lexical_analyser, identifier_table):
 
-    # ( expression )
+    # ( ⟨expression⟩ )
     if lexical_analyser.isCharacter("("):
 
         lexical_analyser.acceptCharacter("(")
 
-        expr_type = expression(
+        expr_type, has_value = expression(
             lexical_analyser,
             identifier_table
         )
 
         lexical_analyser.acceptCharacter(")")
 
-        return expr_type
+        return (expr_type, has_value)
 
 
-    # entier | booléen
+    # ⟨valeur⟩ : entier | booléen
     if lexical_analyser.isInteger() \
        or lexical_analyser.isKeyword("true") \
        or lexical_analyser.isKeyword("false"):
 
-        return valeur(lexical_analyser)
+        return (valeur(lexical_analyser), True)
 
 
-    # identificateur / appel fonction
-    # ⟨appelFonct⟩ : := ⟨ident⟩ ( ⟨listePe⟩ ) | ⟨ident⟩ ( )
+    # ⟨ident⟩ | ⟨appelFonct⟩
     if lexical_analyser.isIdentifier():
 
         ident = lexical_analyser.acceptIdentifier()
@@ -590,11 +584,11 @@ def elemPrim(lexical_analyser, identifier_table):
                     f"'{ident}' is not a function"
                 )
 
-            return info["return_type"]
+            return (info["return_type"], True)
 
 
         # variable simple
-        return info["type"]
+        return (info["type"], info["has_value"])
 
 
     raise AnaSynException("Unknown value!")
@@ -640,13 +634,21 @@ def es(lexical_analyser, identifier_table):
 
     lexical_analyser.acceptKeyword("put")
     lexical_analyser.acceptCharacter("(")
-    expression(lexical_analyser, identifier_table)
+    _, has_value = expression(lexical_analyser, identifier_table)
+    if not has_value :
+        raise AnaSynException(
+            f"Erreur sémantique : Impossible d'appliquer put() à une variable non initialisée"
+        )
     lexical_analyser.acceptCharacter(")")
 
 
 def boucle(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("while")
-    expression(lexical_analyser, identifier_table)
+    type, has_value = expression(lexical_analyser, identifier_table)
+    if (not has_value) or (type != "boolean") :
+        raise AnaSynException(
+            f"Erreur sémantique : La condition présente après un 'while' doit être booléenne"
+        )
     lexical_analyser.acceptKeyword("loop")
     suiteInstr(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("end")
@@ -654,7 +656,11 @@ def boucle(lexical_analyser, identifier_table):
 
 def altern(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("if")
-    expression(lexical_analyser, identifier_table)
+    type, has_value = expression(lexical_analyser, identifier_table)
+    if (not has_value) or (type != "boolean") :
+        raise AnaSynException(
+            f"Erreur sémantique : La condition présente après un 'if' doit être booléenne"
+        )
     lexical_analyser.acceptKeyword("then")
     suiteInstr(lexical_analyser, identifier_table)
     if lexical_analyser.isKeyword("else"):
@@ -692,7 +698,11 @@ def main():
         action="store_true",
         help="shows the final identifiers table",
     )
-    
+    parser.add_argument(
+        "--show-tree",
+        action="store_true",
+        help="shows the abstract syntax tree",
+    )
     args = parser.parse_args()
 
     # create logger
@@ -729,6 +739,7 @@ def main():
 
     lexical_analyser.init_analyser()
     identifier_table = IdentifierTable()
+    ast = AbstractSyntaxTree()
 
     program(lexical_analyser, identifier_table)
 
@@ -737,7 +748,10 @@ def main():
         print(str(identifier_table))
         print("------ END OF IDENTIFIER TABLE ------")
 
-
+    if args.show_tree:
+        print("------ ABSTRACT SYNTAX TREE ------")
+        print(str(ast))
+        print("------ END OF ABSTRACT SYNTAX TREE ------")
 
     if args.outputfile:
         try:
