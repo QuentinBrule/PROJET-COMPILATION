@@ -10,6 +10,7 @@ import logging
 
 import analex
 from IdentifierTable import IdentifierTable
+from compiler import GenerateurCodeNilNovi
 from abstractSyntaxTree import (
     AbstractSyntaxTree,
     Programme, DeclarationVariables, DeclarationVariable,
@@ -513,9 +514,7 @@ def es(lexical_analyser, identifier_table):
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
         _require_declared(identifier_table, ident)
-        info = identifier_table.lookup(ident)
-        if not info["has_value"]:
-            raise AnaSynException(f"Erreur sémantique : Variable {ident} non initialisée")
+        identifier_table.lookup(ident)["has_value"] = True  # get() initialise la variable
         lexical_analyser.acceptCharacter(")")
         return Lecture(cible=ident)
 
@@ -614,13 +613,9 @@ def main():
         print(str(ast))
         print("------ END OF ABSTRACT SYNTAX TREE ------")
 
-    if args.outputfile:
-        try:
-            output_file = open(args.outputfile, 'w')
-        except:
-            print("Error: can't open output file!")
-            return
-        output_file.close()
+    generateur = GenerateurCodeNilNovi()
+    generateur.generer(ast.root)
+    generateur.sauvegarder(args.outputfile)
 
 
 if __name__ == "__main__":
