@@ -2,10 +2,11 @@
 //  programme incorrect
 //  
 //  M. Guyomard
-//  type non existant
+//  affectation : typage incorrect : entier dans booleen
 //-----------------------------------------------  
-procedure pp is
-  e,e:a;				//mess. erreur attendu
+
+procedure e is
+  b: boolean;
 begin
-  put(15)
+  b:=3  //mess. erreur attendu ici
 end.
