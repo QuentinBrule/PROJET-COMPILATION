@@ -458,6 +458,23 @@ class LexicalAnalyser(object):
         # @return value of the current unit
 	def get_value(self):
 		return self.lexical_units[self.lexical_unit_index].get_value()
+
+	## Returns current location (line, column) in source.
+	# If the analyser is past the last unit, returns the last known unit location.
+	# @return (line_index, col_index) or (None, None) if unknown
+	def get_current_location(self):
+		if len(self.lexical_units) == 0:
+			return (None, None)
+
+		if self.lexical_unit_index < 0:
+			return (None, None)
+
+		idx = self.lexical_unit_index
+		if idx >= len(self.lexical_units):
+			idx = len(self.lexical_units) - 1
+
+		unit = self.lexical_units[idx]
+		return (unit.get_line_index(), unit.get_col_index())
 			
         ## Initializes the lexical analyser
 	def init_analyser(self):
