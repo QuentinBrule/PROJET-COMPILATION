@@ -44,7 +44,7 @@ def program(lexical_analyser, identifier_table):
 def specifProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     ident = lexical_analyser.acceptIdentifier()
-    identifier_table.declare(ident, {"kind": "procedure", "type": "void", "has_value": False})
+    identifier_table.declare(ident, {"kind": "procedure", "type": "void", "has_value": True})
     logger.debug("Name of program: %s", ident)
 
 # ⟨corpsProgPrinc⟩ : := ⟨partieDecla⟩ begin ⟨suiteInstr⟩ end .| begin ⟨suiteInstr⟩ end 
@@ -89,7 +89,7 @@ def procedure(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void", "has_value": False}
+    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void", "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of procedure: %s", name)
 
@@ -112,7 +112,7 @@ def fonction(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("function")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None, "has_value": False}
+    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None, "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of function: %s", name)
 
@@ -184,7 +184,7 @@ def specif(lex, identifier_table):
 
     params = []
     for ident in idents:
-        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ, "has_value": False})
+        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ, "has_value": True})
         params.append({"name": ident, "mode": param_mode, "type": typ})
     return params
 
@@ -624,10 +624,11 @@ def es(lexical_analyser, identifier_table):
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
         info = identifier_table.lookup(ident)
-        if not info["has_value"] :
+        if not info["type"] == "integer" :
             raise AnaSynException(
-                f"Erreur sémantique : Variable {ident} non initialisée"
+                f"Erreur sémantique : Variable {ident} doit être entière"
             )
+        info["has_value"] = True
         _require_declared(identifier_table, ident)
         lexical_analyser.acceptCharacter(")")
         return
