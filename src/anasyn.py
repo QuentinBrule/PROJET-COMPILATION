@@ -26,11 +26,11 @@ class AnaSynException(Exception):
 
 def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
 def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
 
 
@@ -82,7 +82,7 @@ def declaOp(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("function"):
         fonction(lexical_analyser, identifier_table)
         return
-    raise AnaSynException(f"Expecting procedure/function declaration, got <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Déclaration de fonction / procédure attendue, mais <{lexical_analyser.get_value()}> obtenu")
 
 # ⟨procedure⟩ : := procedure ⟨ident⟩ ⟨partieFormelle⟩ is ⟨corpsProc⟩
 def procedure(lexical_analyser, identifier_table):
@@ -204,7 +204,7 @@ def nnpType(lexical_analyser):
     if lexical_analyser.isKeyword("boolean"):
         lexical_analyser.acceptKeyword("boolean")
         return "boolean"
-    raise AnaSynException(f"Unknown type found <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Type <{lexical_analyser.get_value()}> non reconnu")
 
 
 def partieDeclaProc(lexical_analyser, identifier_table):
@@ -474,7 +474,7 @@ def opMult(lexical_analyser):
     if lexical_analyser.isCharacter("/"):
         lexical_analyser.acceptCharacter("/")
         return "/"
-    raise AnaSynException(f"Erreur sémantique : Opérateur multiplicative non reconnu <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Opérateur multiplicatif non reconnu <{lexical_analyser.get_value()}>")
 
 
 # ⟨prim⟩ : := ⟨opUnaire⟩ ⟨elemPrim⟩ | ⟨elemPrim⟩
@@ -502,7 +502,7 @@ def prim(lexical_analyser, identifier_table):
 
         if t != "integer":
             raise AnaSynException(
-                "Erreur sémantique : Les opérateurs unaires +/- doivent être suivis d'un integer et non d'un {t}"
+                f"Erreur sémantique : Les opérateurs unaires +/- doivent être suivis d'un integer et non d'un {t}"
             )
 
         return ("integer", has_value)
@@ -558,7 +558,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
         if info is None:
             raise AnaSynException(
-                f"Erreur sémantique : Identifiant '{ident}' non déclaré"
+                f"Erreur sémantique : Identifiant <{ident}> non déclaré"
             )
 
 
@@ -581,7 +581,7 @@ def elemPrim(lexical_analyser, identifier_table):
             if info["kind"] != "function":
 
                 raise AnaSynException(
-                    f"Erreur sémantique : '{ident}' n'est pas une fonction"
+                    f"Erreur sémantique : <{ident}> n'est pas une fonction"
                 )
 
             return (info["type"], True)
@@ -591,7 +591,7 @@ def elemPrim(lexical_analyser, identifier_table):
         return (info["type"], info["has_value"])
 
 
-    raise AnaSynException("Unknown value!")
+    raise AnaSynException(f"Erreur sémantique : Valeur inconnue")
 
 # ⟨valeur⟩ : := ⟨entier⟩ | ⟨valBool⟩
 def valeur(lexical_analyser):
@@ -626,7 +626,7 @@ def es(lexical_analyser, identifier_table):
         info = identifier_table.lookup(ident)
         if not info["type"] == "integer" :
             raise AnaSynException(
-                f"Erreur sémantique : Variable {ident} doit être un integer"
+                f"Erreur sémantique : Variable <{ident}> doit être un integer"
             )
         info["has_value"] = True
         _require_declared(identifier_table, ident)
