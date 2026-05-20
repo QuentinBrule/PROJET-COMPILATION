@@ -32,6 +32,10 @@ def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
         raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Use of undeclared {context}: {name}")
+
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
