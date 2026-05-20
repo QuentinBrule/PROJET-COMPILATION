@@ -27,6 +27,10 @@ def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
         raise AnaSynException(f"Use of undeclared {context}: {name}")
 
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Use of undeclared {context}: {name}")
+
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
@@ -38,6 +42,7 @@ def program(lexical_analyser, identifier_table):
 
 def specifProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
+    #print("debutProg(); tra(ad1);")
     ident = lexical_analyser.acceptIdentifier()
     identifier_table.declare(ident, {"kind": "procedure", "type": "void"})
     logger.debug("Name of program: %s", ident)
@@ -174,11 +179,12 @@ def specif(lex, identifier_table):
     param_mode = "in"
     if lex.isKeyword("in"):
         param_mode = mode_param(lex)
-
+        
     typ = nnpType(lex)
 
     params = []
     for ident in idents:
+        print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
         identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ})
         params.append({"name": ident, "mode": param_mode, "type": typ})
     return params
@@ -219,9 +225,14 @@ def declaVar(lexical_analyser, identifier_table):
     var_type = nnpType(lexical_analyser)
     lexical_analyser.acceptCharacter(";")
 
-    for ident in idents:
-        identifier_table.declare(ident, {"kind": "variable", "type": var_type})
+    nbParam = 0 
 
+    for ident in idents:
+        identifier_table.declare(ident, {"kind": "variable", "type": var_type, "has_value": False})
+        nbParam = nbParam + 1
+        print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
+
+    print(f"reserver({nbParam})")
 
 # <listeIdent> ::= ident (, ident)*
 def listeIdent(lexical_analyser):
@@ -261,15 +272,20 @@ def instr(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("return"):
         retour(lexical_analyser, identifier_table)
         return
+
+    ## Vérification de type lors d'une affectation
+    # ⟨affectation⟩ : := ⟨ident⟩ := ⟨expression⟩
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
+        print(f"empilerAd(as(<{ident}>));")
         _require_declared(identifier_table, ident)
 
         if lexical_analyser.isSymbol(":="):
             lexical_analyser.acceptSymbol(":=")
 
             # type de la variable gauche
-            left_type = identifier_table[ident]["type"]
+            info = identifier_table.lookup(ident)
+            left_type = info["type"]
 
             # type de l'expression droite
             right_type = expression(lexical_analyser, identifier_table)
@@ -280,7 +296,9 @@ def instr(lexical_analyser, identifier_table):
                     f"Erreur sémantique : affectation interdite de {right_type} dans {left_type}"
                 )
 
+            info["has_value"] = True
             logger.debug("parsed affectation")
+            print("affectation()")
             return
 
         if lexical_analyser.isCharacter("("):
@@ -324,6 +342,7 @@ def expression(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨exp1⟩ : := ⟨exp1⟩ and ⟨exp2⟩ | ⟨exp2⟩
 def exp1(lexical_analyser, identifier_table):
 
     left_type = exp2(lexical_analyser, identifier_table)
@@ -344,6 +363,7 @@ def exp1(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨exp2⟩ : := ⟨exp2⟩ ⟨opRel⟩ ⟨exp3⟩ | ⟨exp3⟩
 def exp2(lexical_analyser, identifier_table):
 
     left_type = exp3(lexical_analyser, identifier_table)
@@ -371,6 +391,7 @@ def exp2(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opRel⟩ : := = | /= | < | <= | > | >=
 def opRel(lexical_analyser):
     if lexical_analyser.isSymbol("<"):
         lexical_analyser.acceptSymbol("<")
@@ -419,6 +440,7 @@ def exp3(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opAd⟩ : := + | -
 def opAdd(lexical_analyser):
     if lexical_analyser.isCharacter("+"):
         lexical_analyser.acceptCharacter("+")
@@ -429,6 +451,7 @@ def opAdd(lexical_analyser):
     raise AnaSynException(f"Unknown additive operator <{lexical_analyser.get_value()}>")
 
 
+# ⟨exp4⟩ : := ⟨exp4⟩ ⟨opMult⟩ ⟨prim⟩ | ⟨prim⟩
 def exp4(lexical_analyser, identifier_table):
 
     left_type = prim(lexical_analyser, identifier_table)
@@ -449,6 +472,7 @@ def exp4(lexical_analyser, identifier_table):
     return left_type
 
 
+# ⟨opMult⟩ : := * | /
 def opMult(lexical_analyser):
     if lexical_analyser.isCharacter("*"):
         lexical_analyser.acceptCharacter("*")
@@ -459,6 +483,7 @@ def opMult(lexical_analyser):
     raise AnaSynException(f"Unknown multiplicative operator <{lexical_analyser.get_value()}>")
 
 
+# ⟨prim⟩ : := ⟨opUnaire⟩ ⟨elemPrim⟩ | ⟨elemPrim⟩
 def prim(lexical_analyser, identifier_table):
 
     if lexical_analyser.isKeyword("not"):
@@ -491,6 +516,7 @@ def prim(lexical_analyser, identifier_table):
     return elemPrim(lexical_analyser, identifier_table)
 
 
+# ⟨opUnaire⟩ : := + | - | not
 def opUnaire(lexical_analyser):
     if lexical_analyser.isCharacter("+"):
         lexical_analyser.acceptCharacter("+")
@@ -529,6 +555,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
 
     # identificateur / appel fonction
+    # ⟨appelFonct⟩ : := ⟨ident⟩ ( ⟨listePe⟩ ) | ⟨ident⟩ ( )
     if lexical_analyser.isIdentifier():
 
         ident = lexical_analyser.acceptIdentifier()
@@ -572,6 +599,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
     raise AnaSynException("Unknown value!")
 
+# ⟨valeur⟩ : := ⟨entier⟩ | ⟨valBool⟩
 def valeur(lexical_analyser):
 
     if lexical_analyser.isInteger():
@@ -595,11 +623,17 @@ def valBool(lexical_analyser):
     else:
         lexical_analyser.acceptKeyword("false")
 
+# ⟨es⟩ : := get ( ⟨ident⟩ ) | put ( ⟨expression⟩ )
 def es(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("get"):
         lexical_analyser.acceptKeyword("get")
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
+        info = identifier_table.lookup(ident)
+        if not info["has_value"] :
+            raise AnaSynException(
+                f"Erreur sémantique : Variable {ident} non initialisée"
+            )
         _require_declared(identifier_table, ident)
         lexical_analyser.acceptCharacter(")")
         return
@@ -654,13 +688,11 @@ def main():
         help="show debugging info on output",
     )
     parser.add_argument(
-        "--show-ident-table",
+        "--show-indent-table",
         action="store_true",
         help="shows the final identifiers table",
     )
-
-    # parser.add_argument('-p', '--pseudo-code', ...)
-
+    
     args = parser.parse_args()
 
     # create logger
@@ -700,10 +732,12 @@ def main():
 
     program(lexical_analyser, identifier_table)
 
-    if args.show_ident_table:
+    if args.show_indent_table:
         print("------ IDENTIFIER TABLE ------")
         print(str(identifier_table))
         print("------ END OF IDENTIFIER TABLE ------")
+
+
 
     if args.outputfile:
         try:
