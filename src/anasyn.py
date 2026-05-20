@@ -26,11 +26,11 @@ class AnaSynException(Exception):
 
 def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Use of undeclared {context}: {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
 
 def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Use of undeclared {context}: {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
 
 
 
@@ -224,9 +224,14 @@ def declaVar(lexical_analyser, identifier_table):
     var_type = nnpType(lexical_analyser)
     lexical_analyser.acceptCharacter(";")
 
+    nbParam = 0 
+
     for ident in idents:
         identifier_table.declare(ident, {"kind": "variable", "type": var_type, "has_value": False})
+        nbParam = nbParam + 1
+        #print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
 
+    #print(f"reserver({nbParam})")
 
 # <listeIdent> ::= ident (, ident)*
 def listeIdent(lexical_analyser):
@@ -271,6 +276,7 @@ def instr(lexical_analyser, identifier_table):
     # ⟨affectation⟩ : := ⟨ident⟩ := ⟨expression⟩
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
+        #print(f"empilerAd(as(<{ident}>));")
         _require_declared(identifier_table, ident)
 
         if lexical_analyser.isSymbol(":="):
@@ -291,6 +297,7 @@ def instr(lexical_analyser, identifier_table):
 
             info["has_value"] = True
             logger.debug("parsed affectation")
+            #print("affectation()")
             return
 
         if lexical_analyser.isCharacter("("):
@@ -481,7 +488,7 @@ def prim(lexical_analyser, identifier_table):
 
         if t != "boolean":
             raise AnaSynException(
-                "'not' requires boolean"
+                "Erreur sémantique : 'not' nécessite un boolean"
             )
 
         return ("boolean", has_value)
@@ -495,7 +502,7 @@ def prim(lexical_analyser, identifier_table):
 
         if t != "integer":
             raise AnaSynException(
-                "Unary +/- require integer"
+                "Erreur sémantique : les opérateurs unaire +/- nécessitent un integer"
             )
 
         return ("integer", has_value)
@@ -551,7 +558,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
         if info is None:
             raise AnaSynException(
-                f"Identifier '{ident}' not declared"
+                f"Erreur sémantique : identifiant '{ident}' non déclaré"
             )
 
 
@@ -719,13 +726,15 @@ def main():
         f = open(filename, 'r')
     except:
         print("Error: can't open input file!")
-        return
+        return 1
 
     lexical_analyser = analex.LexicalAnalyser()
 
     lineIndex = 0
+    source_lines = []
     for line in f:
         line = line.rstrip('\r\n')
+        source_lines.append(line)
         lexical_analyser.analyse_line(lineIndex, line)
         lineIndex += 1
     f.close()
@@ -734,8 +743,20 @@ def main():
     identifier_table = IdentifierTable()
     ast = AbstractSyntaxTree()
 
-    program(lexical_analyser, identifier_table)
-
+    try:
+        program(lexical_analyser, identifier_table)
+    except AnaSynException as e:
+        # Print errors with optional source line context for semantic issues.
+        msg = str(e.value)
+        print(msg, file=sys.stderr)
+        line_idx, col_idx = lexical_analyser.get_current_location()
+        if line_idx is not None and 0 <= line_idx < len(source_lines):
+            # Lexical analyser uses 0-based indexes; display as 1-based.
+            display_line = line_idx + 1
+            display_col = (col_idx + 1) if col_idx is not None else 1
+            print(f"--> {filename}:{display_line}:{display_col}", file=sys.stderr)
+        return 2
+    
     if args.show_indent_table:
         print("------ IDENTIFIER TABLE ------")
         print(str(identifier_table))
@@ -751,9 +772,11 @@ def main():
             output_file = open(args.outputfile, 'w')
         except:
             print("Error: can't open output file!")
-            return
+            return 1
 
         output_file.close()
+
+    return 0
 
 
 if __name__ == "__main__":
