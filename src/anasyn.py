@@ -26,11 +26,11 @@ class AnaSynException(Exception):
 
 def _require_declared(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
 def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
-        raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
+        raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
 
 
@@ -44,7 +44,7 @@ def program(lexical_analyser, identifier_table):
 def specifProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     ident = lexical_analyser.acceptIdentifier()
-    identifier_table.declare(ident, {"kind": "procedure", "type": "void"})
+    identifier_table.declare(ident, {"kind": "procedure", "type": "void", "has_value": True})
     logger.debug("Name of program: %s", ident)
 
 # ⟨corpsProgPrinc⟩ : := ⟨partieDecla⟩ begin ⟨suiteInstr⟩ end .| begin ⟨suiteInstr⟩ end 
@@ -82,14 +82,14 @@ def declaOp(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("function"):
         fonction(lexical_analyser, identifier_table)
         return
-    raise AnaSynException(f"Expecting procedure/function declaration, got <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Déclaration de fonction / procédure attendue, mais <{lexical_analyser.get_value()}> obtenu")
 
 # ⟨procedure⟩ : := procedure ⟨ident⟩ ⟨partieFormelle⟩ is ⟨corpsProc⟩
 def procedure(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("procedure")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void"}
+    entry = {"kind": "procedure", "params": [], "nb_params": 0, "type": "void", "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of procedure: %s", name)
 
@@ -112,7 +112,7 @@ def fonction(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("function")
     name = lexical_analyser.acceptIdentifier()
 
-    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None}
+    entry = {"kind": "function", "params": [], "nb_params": 0, "type": None, "has_value": True}
     identifier_table.declare(name, entry)
     logger.debug("Name of function: %s", name)
 
@@ -184,7 +184,7 @@ def specif(lex, identifier_table):
 
     params = []
     for ident in idents:
-        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ})
+        identifier_table.declare(ident, {"kind": "parameter", "mode": param_mode, "type": typ, "has_value": True})
         params.append({"name": ident, "mode": param_mode, "type": typ})
     return params
 
@@ -204,7 +204,7 @@ def nnpType(lexical_analyser):
     if lexical_analyser.isKeyword("boolean"):
         lexical_analyser.acceptKeyword("boolean")
         return "boolean"
-    raise AnaSynException(f"Unknown type found <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Type <{lexical_analyser.get_value()}> non reconnu")
 
 
 def partieDeclaProc(lexical_analyser, identifier_table):
@@ -273,6 +273,7 @@ def instr(lexical_analyser, identifier_table):
     # ⟨affectation⟩ : := ⟨ident⟩ := ⟨expression⟩
     if lexical_analyser.isIdentifier():
         ident = lexical_analyser.acceptIdentifier()
+        #print(f"empilerAd(as(<{ident}>));")
         _require_declared(identifier_table, ident)
 
         if lexical_analyser.isSymbol(":="):
@@ -288,11 +289,12 @@ def instr(lexical_analyser, identifier_table):
             # vérification sémantique
             if left_type != right_type:
                 raise AnaSynException(
-                    f"Erreur sémantique : affectation interdite de {right_type} dans {left_type}"
+                    f"Erreur sémantique : Affectation interdite de {right_type} dans {left_type}"
                 )
 
             info["has_value"] = True
             logger.debug("parsed affectation")
+            #print("affectation()")
             return
 
         if lexical_analyser.isCharacter("("):
@@ -303,9 +305,9 @@ def instr(lexical_analyser, identifier_table):
             logger.debug("parsed call: %s", ident)
             return
 
-        raise AnaSynException("Expecting procedure call or affectation!")
+        raise AnaSynException("Erreur sémantique : Affectation ou appel de procédure attendu")
 
-    raise AnaSynException(f"Unknown instruction <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Instruction <{lexical_analyser.get_value()}> non reconnue")
 
 
 def listePe(lex, identifier_table):
@@ -377,7 +379,7 @@ def exp2(lexical_analyser, identifier_table):
 
         if left_type != right_type:
             raise AnaSynException(
-                "Erreur sémantique : type incompatible dans la comparaison"
+                f"Erreur sémantique : Impossible de comparer un {left_type} et un {right_type}"
             )
 
         return ("boolean", True)
@@ -405,7 +407,7 @@ def opRel(lexical_analyser):
     if lexical_analyser.isSymbol("/="):
         lexical_analyser.acceptSymbol("/=")
         return "/="
-    raise AnaSynException(f"Unknown relationnal operator <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Opérateur relationnel non reconnu <{lexical_analyser.get_value()}>")
 
 
 # ⟨exp3⟩ : := ⟨exp3⟩ ⟨opAd⟩ ⟨exp4⟩ | ⟨exp4⟩
@@ -421,7 +423,7 @@ def exp3(lexical_analyser, identifier_table):
 
         if left_type != "integer" or right_type != "integer":
             raise AnaSynException(
-                "Erreur sémantique : opérations arithmétiques + et - nécessitent des entiers"
+                "Erreur sémantique : Les opérations arithmétiques + et - nécessitent des integers"
             )
 
         left_type = "integer"
@@ -437,7 +439,7 @@ def opAdd(lexical_analyser):
     if lexical_analyser.isCharacter("-"):
         lexical_analyser.acceptCharacter("-")
         return "-"
-    raise AnaSynException(f"Unknown additive operator <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Opérateur additionnel non reconnu <{lexical_analyser.get_value()}>")
 
 
 # ⟨exp4⟩ : := ⟨exp4⟩ ⟨opMult⟩ ⟨prim⟩ | ⟨prim⟩
@@ -453,7 +455,7 @@ def exp4(lexical_analyser, identifier_table):
 
         if left_type != "integer" or right_type != "integer":
             raise AnaSynException(
-                "Erreur sémantique : opérations arithmétiques * et / nécessitent des integers"
+                "Erreur sémantique : Les opérations arithmétiques * et / nécessitent des integers"
             )
 
         left_type = "integer"
@@ -469,7 +471,7 @@ def opMult(lexical_analyser):
     if lexical_analyser.isCharacter("/"):
         lexical_analyser.acceptCharacter("/")
         return "/"
-    raise AnaSynException(f"Unknown multiplicative operator <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Opérateur multiplicatif non reconnu <{lexical_analyser.get_value()}>")
 
 
 # ⟨prim⟩ : := ⟨opUnaire⟩ ⟨elemPrim⟩ | ⟨elemPrim⟩
@@ -483,7 +485,7 @@ def prim(lexical_analyser, identifier_table):
 
         if t != "boolean":
             raise AnaSynException(
-                "Erreur sémantique : 'not' nécessite un boolean"
+                f"Erreur sémantique : L'opérateur unaire 'not' doit être suivi d'un boolean et non d'un {t}"
             )
 
         return ("boolean", has_value)
@@ -497,7 +499,7 @@ def prim(lexical_analyser, identifier_table):
 
         if t != "integer":
             raise AnaSynException(
-                "Erreur sémantique : les opérateurs unaire +/- nécessitent un integer"
+                f"Erreur sémantique : Les opérateurs unaires +/- doivent être suivis d'un integer et non d'un {t}"
             )
 
         return ("integer", has_value)
@@ -516,10 +518,18 @@ def opUnaire(lexical_analyser):
     if lexical_analyser.isKeyword("not"):
         lexical_analyser.acceptKeyword("not")
         return "not"
-    raise AnaSynException(f"Unknown unary operator <{lexical_analyser.get_value()}>")
+    raise AnaSynException(f"Erreur sémantique : Opérateur unaire non reconnu <{lexical_analyser.get_value()}>")
 
 # ⟨elemPrim⟩ : := ⟨valeur⟩ | ( ⟨expression⟩ ) | ⟨ident⟩ | ⟨appelFonct⟩
 def elemPrim(lexical_analyser, identifier_table):
+
+    # ⟨valeur⟩ : entier | booléen
+    if lexical_analyser.isInteger() \
+       or lexical_analyser.isKeyword("true") \
+       or lexical_analyser.isKeyword("false"):
+
+        return (valeur(lexical_analyser), True)
+
 
     # ( ⟨expression⟩ )
     if lexical_analyser.isCharacter("("):
@@ -536,14 +546,6 @@ def elemPrim(lexical_analyser, identifier_table):
         return (expr_type, has_value)
 
 
-    # ⟨valeur⟩ : entier | booléen
-    if lexical_analyser.isInteger() \
-       or lexical_analyser.isKeyword("true") \
-       or lexical_analyser.isKeyword("false"):
-
-        return (valeur(lexical_analyser), True)
-
-
     # ⟨ident⟩ | ⟨appelFonct⟩
     if lexical_analyser.isIdentifier():
 
@@ -553,7 +555,7 @@ def elemPrim(lexical_analyser, identifier_table):
 
         if info is None:
             raise AnaSynException(
-                f"Erreur sémantique : identifiant '{ident}' non déclaré"
+                f"Erreur sémantique : Identifiant <{ident}> non déclaré"
             )
 
 
@@ -576,7 +578,7 @@ def elemPrim(lexical_analyser, identifier_table):
             if info["kind"] != "function":
 
                 raise AnaSynException(
-                    f"'{ident}' is not a function"
+                    f"Erreur sémantique : <{ident}> n'est pas une fonction"
                 )
 
             return (info["type"], True)
@@ -586,7 +588,7 @@ def elemPrim(lexical_analyser, identifier_table):
         return (info["type"], info["has_value"])
 
 
-    raise AnaSynException("Unknown value!")
+    raise AnaSynException(f"Erreur sémantique : Valeur inconnue")
 
 # ⟨valeur⟩ : := ⟨entier⟩ | ⟨valBool⟩
 def valeur(lexical_analyser):
@@ -602,7 +604,7 @@ def valeur(lexical_analyser):
         return "boolean"
 
     raise AnaSynException(
-        "Erreur sémantique : normalement il faut un integer ou un boolean"
+        "Erreur sémantique : Integer ou boolean attendu"
     )
 
 def valBool(lexical_analyser):
@@ -619,10 +621,11 @@ def es(lexical_analyser, identifier_table):
         lexical_analyser.acceptCharacter("(")
         ident = lexical_analyser.acceptIdentifier()
         info = identifier_table.lookup(ident)
-        if not info["has_value"] :
+        if not info["type"] == "integer" :
             raise AnaSynException(
-                f"Erreur sémantique : Variable {ident} non initialisée"
+                f"Erreur sémantique : Variable <{ident}> doit être un integer"
             )
+        info["has_value"] = True
         _require_declared(identifier_table, ident)
         lexical_analyser.acceptCharacter(")")
         return
