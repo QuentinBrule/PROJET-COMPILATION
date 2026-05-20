@@ -87,3 +87,46 @@ class Retourner(NoeudAST):
     """return <expression>"""
     def __init__(self, expression):
         self.expression = expression
+        
+# ---------------------------------------------------------------------------
+# Expressions
+# ---------------------------------------------------------------------------
+
+class OperationBinaire(NoeudAST):
+    """<gauche> <op> <droite>  avec op dans {+,-,*,/,=,/=,<,<=,>,>=,and,or}"""
+    def __init__(self, operateur, gauche, droite):
+        self.operateur = operateur  # str
+        self.gauche = gauche
+        self.droite = droite
+
+
+class OperationUnaire(NoeudAST):
+    """<op> <operande>  avec op dans {-, not}"""
+    def __init__(self, operateur, operande):
+        self.operateur = operateur  # str
+        self.operande = operande
+
+
+class Identifiant(NoeudAST):
+    """Référence à une variable."""
+    def __init__(self, nom):
+        self.nom = nom  # str
+
+
+class Nombre(NoeudAST):
+    """Littéral entier."""
+    def __init__(self, valeur):
+        self.valeur = valeur  # int
+
+
+class Booleen(NoeudAST):
+    """Littéral booléen (true / false)."""
+    def __init__(self, valeur):
+        self.valeur = valeur  # bool
+
+
+class AppelFonction(NoeudAST):
+    """Appel de fonction utilisé comme expression."""
+    def __init__(self, nom, arguments):
+        self.nom = nom
+        self.arguments = arguments  # list[NoeudAST]
