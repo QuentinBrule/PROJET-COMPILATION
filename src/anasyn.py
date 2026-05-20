@@ -32,6 +32,10 @@ def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
         raise AnaSynException(f"Erreur sémantique : utilisation de {context} non déclaré : {name}")
 
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Use of undeclared {context}: {name}")
+
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
@@ -544,7 +548,8 @@ def elemPrim(lexical_analyser, identifier_table):
         return (valeur(lexical_analyser), True)
 
 
-    # ⟨ident⟩ | ⟨appelFonct⟩
+    # identificateur / appel fonction
+    # ⟨appelFonct⟩ : := ⟨ident⟩ ( ⟨listePe⟩ ) | ⟨ident⟩ ( )
     if lexical_analyser.isIdentifier():
 
         ident = lexical_analyser.acceptIdentifier()
