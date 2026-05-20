@@ -32,6 +32,10 @@ def _require_set(identifier_table, name, context="identifier"):
     if identifier_table.lookup(name) is None:
         raise AnaSynException(f"Erreur sémantique : utilisation de <{context}> non déclaré : <{name}>")
 
+def _require_set(identifier_table, name, context="identifier"):
+    if identifier_table.lookup(name) is None:
+        raise AnaSynException(f"Use of undeclared {context}: {name}")
+
 
 
 # <program> ::= <specifProgPrinc> is <corpsProgPrinc>
@@ -229,9 +233,6 @@ def declaVar(lexical_analyser, identifier_table):
     for ident in idents:
         identifier_table.declare(ident, {"kind": "variable", "type": var_type, "has_value": False})
         nbParam = nbParam + 1
-        #print(f"empilerAd(as(< {ident} >)); \n valeurPile()")
-
-    #print(f"reserver({nbParam})")
 
 # <listeIdent> ::= ident (, ident)*
 def listeIdent(lexical_analyser):
