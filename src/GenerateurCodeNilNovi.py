@@ -320,5 +320,48 @@ class GenerateurCodeNilNovi:
         elif noeud.operateur == "not":
             self.emettre("non()")
 
-    def visit_AppelFonction(self, _noeud):
-        raise NotImplementedError("visit_AppelFonction — à implémenter (version procédurale)")
+    def visit_DeclarationFonction(self, noeud):
+        adresse = len(self.instructions)
+        niveau = self._niveau_imbrication + 1
+        self._sous_programmes[noeud.nom] = {
+            "adresse": adresse,
+            "niveau": niveau,
+            "params": noeud.params,
+        }
+
+        saved_addr = self._prochaine_adresse
+        self._prochaine_adresse = 0
+        self._niveau_imbrication += 1
+        self._entrer_portee()
+
+        for i, param in enumerate(noeud.params):
+            if param["mode"] == "in out":
+                self._portees[-1][param["name"]] = {"kind": "param_inout", "index": i}
+            else:
+                self._portees[-1][param["name"]] = {"kind": "param_in", "index": i}
+
+        if noeud.declarations:
+            nb_vars = sum(len(d.noms) for d in noeud.declarations)
+            if nb_vars > 0:
+                self.emettre(f"reserver({nb_vars})")
+            for decl in noeud.declarations:
+                for nom in decl.noms:
+                    self._declarer_variable(nom)
+
+        for instr in noeud.instructions:
+            self.visit(instr)
+
+        self._quitter_portee()
+        self._niveau_imbrication -= 1
+        self._prochaine_adresse = saved_addr
+
+    def visit_AppelFonction(self, noeud):
+        info = self._sous_programmes[noeud.nom]
+        self.emettre("reserverBloc()")
+        for i, arg in enumerate(noeud.arguments):
+            mode = info["params"][i]["mode"] if i < len(info["params"]) else "in"
+            if mode == "in out":
+                self._emettre_adresse(arg)
+            else:
+                self.visit(arg)
+        self.emettre(f"traStat({info['adresse']},{info['niveau']})")
