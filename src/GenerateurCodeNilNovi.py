@@ -223,8 +223,9 @@ class GenerateurCodeNilNovi:
     def visit_AppelProcedure(self, _noeud):
         raise NotImplementedError("visit_AppelProcedure — à implémenter (version procédurale)")
 
-    def visit_Retour(self, _noeud):
-        raise NotImplementedError("visit_Retour — à implémenter (version procédurale)")
+    def visit_Retourner(self, noeud):
+        self.visit(noeud.expression)
+        self.emettre("retourFonct()")
 
     # ------------------------------------------------------------------ #
     # Expressions                                                          #
