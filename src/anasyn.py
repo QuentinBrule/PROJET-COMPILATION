@@ -15,6 +15,7 @@ from GenerateurCodeNilNovi import GenerateurCodeNilNovi
 from abstractSyntaxTree import (
     AbstractSyntaxTree,
     Programme, DeclarationVariables, DeclarationVariable,
+    DeclarationProcedure, DeclarationFonction,
     Affectation, Si, TantQue, Lecture, Ecriture,
     AppelProcedure, Retourner,
     OperationBinaire, OperationUnaire,
@@ -45,8 +46,8 @@ def _require_set(identifier_table, name, context="identifier"):
 def program(lexical_analyser, identifier_table):
     nom = specifProgPrinc(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("is")
-    declarations, instructions = corpsProgPrinc(lexical_analyser, identifier_table)
-    return Programme(nom, declarations, instructions)
+    sous_progs, declarations, instructions = corpsProgPrinc(lexical_analyser, identifier_table)
+    return Programme(nom, sous_progs, declarations, instructions)
 
 
 def specifProgPrinc(lexical_analyser, identifier_table):
@@ -61,9 +62,10 @@ def specifProgPrinc(lexical_analyser, identifier_table):
 def corpsProgPrinc(lexical_analyser, identifier_table):
     identifier_table.enter_scope()
 
+    sous_progs = []
     declarations = None
     if not lexical_analyser.isKeyword("begin"):
-        declarations = partieDecla(lexical_analyser, identifier_table)
+        sous_progs, declarations = partieDecla(lexical_analyser, identifier_table)
 
     lexical_analyser.acceptKeyword("begin")
 
@@ -75,29 +77,28 @@ def corpsProgPrinc(lexical_analyser, identifier_table):
     lexical_analyser.acceptFel()
     identifier_table.exit_scope()
     logger.debug("End of program")
-    return declarations, instructions
+    return sous_progs, declarations, instructions
 
 
 # <partieDecla> ::= (<declaOp> ;)* (<listeDeclaVar>)?
 def partieDecla(lexical_analyser, identifier_table):
+    sous_progs = []
     while lexical_analyser.isKeyword("procedure") or lexical_analyser.isKeyword("function"):
-        declaOp(lexical_analyser, identifier_table)
+        sous_progs.append(declaOp(lexical_analyser, identifier_table))
         lexical_analyser.acceptCharacter(";")
 
     variables = []
     if lexical_analyser.isIdentifier():
         variables = listeDeclaVar(lexical_analyser, identifier_table)
 
-    return DeclarationVariables(variables) if variables else None
+    return sous_progs, (DeclarationVariables(variables) if variables else None)
 
 
 def declaOp(lexical_analyser, identifier_table):
     if lexical_analyser.isKeyword("procedure"):
-        procedure(lexical_analyser, identifier_table)
-        return
+        return procedure(lexical_analyser, identifier_table)
     if lexical_analyser.isKeyword("function"):
-        fonction(lexical_analyser, identifier_table)
-        return
+        return fonction(lexical_analyser, identifier_table)
     raise AnaSynException(f"Erreur sémantique : Déclaration de fonction / procédure attendue, mais <{lexical_analyser.get_value()}> obtenu")
 
 
@@ -120,9 +121,10 @@ def procedure(lexical_analyser, identifier_table):
     lexical_analyser.acceptKeyword("is")
 
     identifier_table.enter_scope()
-    corpsProc(lexical_analyser, identifier_table)
+    declarations, instructions = corpsProc(lexical_analyser, identifier_table)
     identifier_table.exit_scope()
     identifier_table.exit_scope()
+    return DeclarationProcedure(name, params, declarations, instructions)
 
 
 def fonction(lexical_analyser, identifier_table):
@@ -141,29 +143,35 @@ def fonction(lexical_analyser, identifier_table):
     entry["nb_params"] = len(params)
 
     lexical_analyser.acceptKeyword("return")
-    entry["type"] = nnpType(lexical_analyser)
+    type_retour = nnpType(lexical_analyser)
+    entry["type"] = type_retour
     lexical_analyser.acceptKeyword("is")
 
     identifier_table.enter_scope()
-    corpsFonct(lexical_analyser, identifier_table)
+    declarations, instructions = corpsFonct(lexical_analyser, identifier_table)
     identifier_table.exit_scope()
     identifier_table.exit_scope()
+    return DeclarationFonction(name, params, type_retour, declarations, instructions)
 
 
 def corpsProc(lexical_analyser, identifier_table):
+    declarations = []
     if not lexical_analyser.isKeyword("begin"):
-        partieDeclaProc(lexical_analyser, identifier_table)
+        declarations = partieDeclaProc(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("begin")
-    suiteInstr(lexical_analyser, identifier_table)
+    instructions = suiteInstr(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("end")
+    return declarations, instructions
 
 
 def corpsFonct(lexical_analyser, identifier_table):
+    declarations = []
     if not lexical_analyser.isKeyword("begin"):
-        partieDeclaProc(lexical_analyser, identifier_table)
+        declarations = partieDeclaProc(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("begin")
-    suiteInstrNonVide(lexical_analyser, identifier_table)
+    instructions = suiteInstrNonVide(lexical_analyser, identifier_table)
     lexical_analyser.acceptKeyword("end")
+    return declarations, instructions
 
 
 def partieFormelle(lexical_analyser, identifier_table):
@@ -219,7 +227,8 @@ def nnpType(lexical_analyser):
 
 def partieDeclaProc(lexical_analyser, identifier_table):
     if lexical_analyser.isIdentifier():
-        listeDeclaVar(lexical_analyser, identifier_table)
+        return listeDeclaVar(lexical_analyser, identifier_table)
+    return []
 
 
 def listeDeclaVar(lexical_analyser, identifier_table):
