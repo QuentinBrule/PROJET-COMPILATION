@@ -15,10 +15,11 @@ class NoeudAST:
 
 class Programme(NoeudAST):
     """Noeud racine : procedure <nom> is <declarations> begin <instructions> end."""
-    def __init__(self, nom, declarations, instructions):
-        self.nom = nom                    # str
-        self.declarations = declarations  # DeclarationVariables | None
-        self.instructions = instructions  # list[NoeudAST]
+    def __init__(self, nom, sous_programmes, declarations, instructions):
+        self.nom = nom                            # str
+        self.sous_programmes = sous_programmes    # list[DeclarationProcedure | DeclarationFonction]
+        self.declarations = declarations          # DeclarationVariables | None
+        self.instructions = instructions          # list[NoeudAST]
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +88,25 @@ class Retourner(NoeudAST):
     """return <expression>"""
     def __init__(self, expression):
         self.expression = expression
+
+
+class DeclarationProcedure(NoeudAST):
+    """procedure <nom> (<params>) is <decls> begin <instrs> end"""
+    def __init__(self, nom, params, declarations, instructions):
+        self.nom = nom
+        self.params = params          # list[{'name': str, 'mode': str, 'type': str}]
+        self.declarations = declarations  # list[DeclarationVariable]
+        self.instructions = instructions  # list[NoeudAST]
+
+
+class DeclarationFonction(NoeudAST):
+    """function <nom> (<params>) return <type> is <decls> begin <instrs> end"""
+    def __init__(self, nom, params, type_retour, declarations, instructions):
+        self.nom = nom
+        self.params = params          # list[{'name': str, 'mode': str, 'type': str}]
+        self.type_retour = type_retour  # str
+        self.declarations = declarations  # list[DeclarationVariable]
+        self.instructions = instructions  # list[NoeudAST]
         
 # ---------------------------------------------------------------------------
 # Expressions
@@ -154,8 +174,22 @@ def _afficher(noeud, indent):
 
     if isinstance(noeud, Programme):
         lignes = [f"{prefixe}Programme({noeud.nom})"]
+        for sp in noeud.sous_programmes:
+            lignes.append(_afficher(sp, indent + 1))
         if noeud.declarations:
             lignes.append(_afficher(noeud.declarations, indent + 1))
+        for instr in noeud.instructions:
+            lignes.append(_afficher(instr, indent + 1))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, DeclarationProcedure):
+        lignes = [f"{prefixe}DeclarationProcedure({noeud.nom})"]
+        for instr in noeud.instructions:
+            lignes.append(_afficher(instr, indent + 1))
+        return "\n".join(lignes)
+
+    if isinstance(noeud, DeclarationFonction):
+        lignes = [f"{prefixe}DeclarationFonction({noeud.nom}) -> {noeud.type_retour}"]
         for instr in noeud.instructions:
             lignes.append(_afficher(instr, indent + 1))
         return "\n".join(lignes)
