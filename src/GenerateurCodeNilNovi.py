@@ -24,9 +24,11 @@ _OPS_BINAIRES = {
 class GenerateurCodeNilNovi:
 
     def __init__(self):
-        self.instructions = []          # liste ordonnée des instructions émises
-        self._portees = [{}]            # pile de portées : _portees[-1] = portée active
-        self._prochaine_adresse = 0     # prochain emplacement libre dans la pile
+        self.instructions = []              # liste ordonnée des instructions émises
+        self._portees = [{}]                # pile de portées : _portees[-1] = portée active
+        self._prochaine_adresse = 0         # prochain emplacement libre dans la pile
+        self._sous_programmes = {}          # nom → {adresse, niveau, params}
+        self._niveau_imbrication = 0        # 0 = programme principal
 
     # ------------------------------------------------------------------ #
     # interface principale                                                 #
@@ -81,30 +83,46 @@ class GenerateurCodeNilNovi:
     def _declarer_variable(self, nom):
         """Attribue la prochaine adresse libre à `nom` dans la portée courante."""
         adresse = self._prochaine_adresse
-        self._portees[-1][nom] = adresse
+        self._portees[-1][nom] = {"kind": "var", "address": adresse}
         self._prochaine_adresse += 1
         return adresse
 
-    def _adresse_variable(self, nom):
-        """Cherche l'adresse statique de `nom` de la portée la plus proche."""
+    def _chercher_symbole(self, nom):
+        """Cherche les infos de `nom` dans la portée la plus proche."""
         for portee in reversed(self._portees):
             if nom in portee:
                 return portee[nom]
         raise KeyError(f"Variable inconnue dans la table des symboles : '{nom}'")
+
+    def _emettre_adresse(self, noeud):
+        """Émet l'adresse (l-value) d'une variable ou d'un paramètre in-out."""
+        nom = getattr(noeud, "nom", None)
+        if nom is None:
+            raise ValueError(f"Argument in-out doit être une variable, pas {type(noeud).__name__}")
+        info = self._chercher_symbole(nom)
+        if info["kind"] == "var":
+            self.emettre(f"empiler({info['address']})")
+        elif info["kind"] == "param_inout":
+            self.emettre(f"empilerParam({info['index']})")
+        else:
+            raise ValueError(f"Impossible de passer '{nom}' en in-out (mode {info['kind']})")
 
     # ------------------------------------------------------------------ #
     # Noeud racine                                                          #
     # ------------------------------------------------------------------ #
 
     def visit_Programme(self, noeud):
-        """
-        Schéma de compilation :
-            debutProg()
-            {Compilation des Déclarations}   → appelle reserver(n)
-            {Compilation des Instructions}
-            finProg()
-        """
         self.emettre("debutProg()")
+
+        if noeud.sous_programmes:
+            idx_tra = len(self.instructions)
+            self.emettre("tra(?)")  # rétropatché après la génération des corps
+
+            for sp in noeud.sous_programmes:
+                self.visit(sp)
+
+            debut_main = len(self.instructions)
+            self.instructions[idx_tra] = f"tra({debut_main})"
 
         if noeud.declarations:
             self.visit(noeud.declarations)
@@ -115,30 +133,66 @@ class GenerateurCodeNilNovi:
         self.emettre("finProg()")
 
     def visit_DeclarationVariables(self, noeud):
-        """
-        Compte le total des variables déclarées, appelle reserver(n),
-        puis enregistre chaque variable dans la table des symboles.
-        """
         total = sum(len(decl.noms) for decl in noeud.variables)
         if total > 0:
             self.emettre(f"reserver({total})")
         for decl in noeud.variables:
-            for nom in decl.noms:
-                self._declarer_variable(nom)
+            self.visit(decl)
+
+    def visit_DeclarationVariable(self, noeud):
+        for nom in noeud.noms:
+            self._declarer_variable(nom)
+
+    # ------------------------------------------------------------------ #
+    # sous-programmes                                                      #
+    # ------------------------------------------------------------------ #
+
+    def visit_DeclarationProcedure(self, noeud):
+        adresse = len(self.instructions)
+        niveau = self._niveau_imbrication + 1
+        self._sous_programmes[noeud.nom] = {
+            "adresse": adresse,
+            "niveau": niveau,
+            "params": noeud.params,
+        }
+
+        saved_addr = self._prochaine_adresse
+        self._prochaine_adresse = 0
+        self._niveau_imbrication += 1
+        self._entrer_portee()
+
+        for i, param in enumerate(noeud.params):
+            if param["mode"] == "in out":
+                self._portees[-1][param["name"]] = {"kind": "param_inout", "index": i}
+            else:
+                self._portees[-1][param["name"]] = {"kind": "param_in", "index": i}
+
+        if noeud.declarations:
+            nb_vars = sum(len(d.noms) for d in noeud.declarations)
+            if nb_vars > 0:
+                self.emettre(f"reserver({nb_vars})")
+            for decl in noeud.declarations:
+                for nom in decl.noms:
+                    self._declarer_variable(nom)
+
+        for instr in noeud.instructions:
+            self.visit(instr)
+
+        self.emettre("retourProc()")
+        self._quitter_portee()
+        self._niveau_imbrication -= 1
+        self._prochaine_adresse = saved_addr
 
     # ------------------------------------------------------------------ #
     # instructions                                                       #
     # ------------------------------------------------------------------ #
 
     def visit_Affectation(self, noeud):
-        """
-        x := expr
-            empiler(adresse_x)  ← adresse cible
-            <expr>              ← valeur à affecter
-            affectation()
-        """
-        adresse = self._adresse_variable(noeud.cible)
-        self.emettre(f"empiler({adresse})")
+        info = self._chercher_symbole(noeud.cible)
+        if info["kind"] == "var":
+            self.emettre(f"empiler({info['address']})")
+        elif info["kind"] == "param_inout":
+            self.emettre(f"empilerParam({info['index']})")
         self.visit(noeud.expression)
         self.emettre("affectation()")
 
@@ -202,29 +256,31 @@ class GenerateurCodeNilNovi:
         self.instructions[idx_tze] = f"tze({fin})"
 
     def visit_Lecture(self, noeud):
-        """
-        get(x)
-            empiler(adresse_x)
-            get()
-        """
-        adresse = self._adresse_variable(noeud.cible)
-        self.emettre(f"empiler({adresse})")
+        info = self._chercher_symbole(noeud.cible)
+        if info["kind"] == "var":
+            self.emettre(f"empiler({info['address']})")
+        elif info["kind"] == "param_inout":
+            self.emettre(f"empilerParam({info['index']})")
         self.emettre("get()")
 
     def visit_Ecriture(self, noeud):
-        """
-        put(expr)
-            <expr>
-            put()
-        """
         self.visit(noeud.expression)
         self.emettre("put()")
 
-    def visit_AppelProcedure(self, _noeud):
-        raise NotImplementedError("visit_AppelProcedure — à implémenter (version procédurale)")
+    def visit_AppelProcedure(self, noeud):
+        info = self._sous_programmes[noeud.nom]
+        self.emettre("reserverBloc()")
+        for i, arg in enumerate(noeud.arguments):
+            mode = info["params"][i]["mode"] if i < len(info["params"]) else "in"
+            if mode == "in out":
+                self._emettre_adresse(arg)
+            else:
+                self.visit(arg)
+        self.emettre(f"traStat({info['adresse']},{info['niveau']})")
 
-    def visit_Retour(self, _noeud):
-        raise NotImplementedError("visit_Retour — à implémenter (version procédurale)")
+    def visit_Retourner(self, noeud):
+        self.visit(noeud.expression)
+        self.emettre("retourFonct()")
 
     # ------------------------------------------------------------------ #
     # Expressions                                                          #
@@ -238,14 +294,15 @@ class GenerateurCodeNilNovi:
         self.emettre(f"empiler({1 if noeud.valeur else 0})")
 
     def visit_Identifiant(self, noeud):
-        """
-        Lecture de la valeur de x :
-            empiler(adresse_x)
-            valeurPile()        ← pile[ip] = pile[pile[ip]]
-        """
-        adresse = self._adresse_variable(noeud.nom)
-        self.emettre(f"empiler({adresse})")
-        self.emettre("valeurPile()")
+        info = self._chercher_symbole(noeud.nom)
+        if info["kind"] == "var":
+            self.emettre(f"empiler({info['address']})")
+            self.emettre("valeurPile()")
+        elif info["kind"] == "param_in":
+            self.emettre(f"empilerParam({info['index']})")
+        elif info["kind"] == "param_inout":
+            self.emettre(f"empilerParam({info['index']})")
+            self.emettre("valeurPile()")
 
     def visit_OperationBinaire(self, noeud):
         self.visit(noeud.gauche)
@@ -261,5 +318,49 @@ class GenerateurCodeNilNovi:
             self.emettre("moins()")
         elif noeud.operateur == "not":
             self.emettre("non()")
-    def visit_AppelFonction(self, _noeud):
-        raise NotImplementedError("visit_AppelFonction — à implémenter (version procédurale)")
+
+    def visit_DeclarationFonction(self, noeud):
+        adresse = len(self.instructions)
+        niveau = self._niveau_imbrication + 1
+        self._sous_programmes[noeud.nom] = {
+            "adresse": adresse,
+            "niveau": niveau,
+            "params": noeud.params,
+        }
+
+        saved_addr = self._prochaine_adresse
+        self._prochaine_adresse = 0
+        self._niveau_imbrication += 1
+        self._entrer_portee()
+
+        for i, param in enumerate(noeud.params):
+            if param["mode"] == "in out":
+                self._portees[-1][param["name"]] = {"kind": "param_inout", "index": i}
+            else:
+                self._portees[-1][param["name"]] = {"kind": "param_in", "index": i}
+
+        if noeud.declarations:
+            nb_vars = sum(len(d.noms) for d in noeud.declarations)
+            if nb_vars > 0:
+                self.emettre(f"reserver({nb_vars})")
+            for decl in noeud.declarations:
+                for nom in decl.noms:
+                    self._declarer_variable(nom)
+
+        for instr in noeud.instructions:
+            self.visit(instr)
+
+        self._quitter_portee()
+        self._niveau_imbrication -= 1
+        self._prochaine_adresse = saved_addr
+
+    def visit_AppelFonction(self, noeud):
+        info = self._sous_programmes[noeud.nom]
+        self.emettre("reserverBloc()")
+        for i, arg in enumerate(noeud.arguments):
+            mode = info["params"][i]["mode"] if i < len(info["params"]) else "in"
+            if mode == "in out":
+                self._emettre_adresse(arg)
+            else:
+                self.visit(arg)
+        self.emettre(f"traStat({info['adresse']},{info['niveau']})")
