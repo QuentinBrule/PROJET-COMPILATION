@@ -38,3 +38,4 @@ test_nnp: bin/vm_nnp
 
 clean:
 	rm -f bin/vm_nna bin/vm_nnp
+	rm -f build/*
