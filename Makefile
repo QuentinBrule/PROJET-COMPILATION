@@ -10,7 +10,7 @@ LFAGS := -lm
 NAME := $(basename $(notdir $(TARGET)))
 
 run: build/$(NAME) bin/vm_nnp
-	./bin/vm_nnp build/$(NAME)
+	./bin/vm_nnp build/$(NAME) $(ARGS)
 
 build/$(NAME): $(TARGET) build
 	python3 src/anasyn.py $(TARGET) -o build/$(NAME)
