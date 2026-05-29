@@ -133,16 +133,15 @@ class GenerateurCodeNilNovi:
         self.emettre("finProg()")
 
     def visit_DeclarationVariables(self, noeud):
-        """
-        Compte le total des variables déclarées, appelle reserver(n),
-        puis enregistre chaque variable dans la table des symboles.
-        """
         total = sum(len(decl.noms) for decl in noeud.variables)
         if total > 0:
             self.emettre(f"reserver({total})")
         for decl in noeud.variables:
-            for nom in decl.noms:
-                self._declarer_variable(nom)
+            self.visit(decl)
+
+    def visit_DeclarationVariable(self, noeud):
+        for nom in noeud.noms:
+            self._declarer_variable(nom)
 
     # ------------------------------------------------------------------ #
     # sous-programmes                                                      #
